@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@layer utilities {
+  @keyframes border-width {
+    from {
+      width: 10px;
+      opacity: 0;
+    }
+    to {
+      width: 100px;
+      opacity: 1;
+    }
+  }
+
+  .animate-border-width {
+    animation: border-width 3s infinite alternate;
+  }
+
+  @keyframes background-shine {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  .animate-background-shine {
+    animation: background-shine 2s linear infinite;
+  }
+}
