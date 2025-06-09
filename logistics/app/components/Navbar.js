@@ -10,15 +10,18 @@ const Navbar = () => {
                 <span className='text-3xl mt-2 font-bold'>Logistique</span>
             </div>
 
-            <ul className='flex space-x-4 gap-5 justify-between px-2 text-lg'>
-                <li>
-                    <Link href="/home">Home</Link>
-                </li>
+            <ul className='flex space-x-4 gap-4 justify-between px-2 text-lg'>
                 <li>
                     <Link href="/about">About</Link>
                 </li>
                 <li>
                     <Link href="/contact">Contact</Link>
+                </li>
+                <li>
+                    <Link href="/login">Log in</Link>
+                </li>
+                <li>
+                    <Link href="/login">Sign up</Link>
                 </li>
             </ul>
         </nav>
