@@ -64,7 +64,7 @@ export default function Home() {
       </div>
     </section>
 
-    {/* <div className="w-full h-0.5 bg-white my-5"></div> */}
+    {/* <div className="w-ffdjkfdull h-0.5 bg-white my-5"></div> */}
 
     {/*what we do*/}
     <WhatWeDo/>
