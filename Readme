@@ -1,3 +1,9 @@
 npm install react-hook-form
 npm i framer-motion
 npm install lucide-react
+npm install @mui/material @emotion/react @emotion/styled
+
+npm install next-auth @prisma/client prisma bcrypt @next-auth/prisma-adapter
+npx prisma generate
+npx prisma migrate dev
+

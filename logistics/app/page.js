@@ -5,10 +5,12 @@ import ButtonBackgroundShine from "./components/ButtonBackgroundShine";
 import InputPulseBorder from "./components/InputPulseBorder";
 import BookingForm from "./components/BookingForm";
 import WhatWeDo from "./components/WhatWeDo";
+import Navbar from "./components/Navbar";
 
 export default function Home() {
   return (<>
     {/* initial home page */}
+    <Navbar/>
     <div className="flex flex-col items-center justify-center min-h-[90vh] ">
       <div className="flex flex-row items-center space-x-3 sm:text-6xl font-bold">
         <span className="text-white">Smart</span>
