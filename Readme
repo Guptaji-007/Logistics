@@ -7,3 +7,4 @@ npm install next-auth @prisma/client prisma bcrypt @next-auth/prisma-adapter
 npx prisma generate
 npx prisma migrate dev
 
+npm install nodemailer

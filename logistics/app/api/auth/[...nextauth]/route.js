@@ -18,7 +18,9 @@ export const authOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
+        // Always show generic error for login failure
         if (!user) return null;
+        if (!user.emailVerified) return null;
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) return null;
         return { id: user.id, email: user.email, role: user.role };

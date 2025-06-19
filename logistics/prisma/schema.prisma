@@ -9,10 +9,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      String   @default("user")
-  createdAt DateTime @default(now())
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  emailVerified  DateTime?
+  resetToken     String?   @unique
+  resetExpires   DateTime?
+  role            String   @default("user")
+  createdAt      DateTime @default(now())
+  // accounts       Account[]
+  // sessions       Session[]
 }
 
