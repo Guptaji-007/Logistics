@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SignupPage() {
+  const [usertype, setUsertype] = useState("user"); // default to user
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,7 +28,7 @@ export default function SignupPage() {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, usertype }),
       });
 
       const data = await res.json();
@@ -48,7 +49,8 @@ export default function SignupPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-amber-50">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">
-        <h2 className="text-2xl font-bold mb-2">Sign Up</h2>
+        {usertype === "user" && <h2 className="text-2xl font-bold mb-2">Sign Up As User</h2>}
+        {usertype === "admin" && <h2 className="text-2xl font-bold mb-2">Sign Up As Admin</h2>}
 
         <input
           type="email"
@@ -91,6 +93,15 @@ export default function SignupPage() {
         <Link href="/login" className="text-blue-500 underline text-sm text-center">
           Already have an account? Login
         </Link>
+        <div className="flex justify-center mt-4">
+          <button
+            type="button"
+            onClick={() => setUsertype(usertype === "user" ? "admin" : "user")}
+            className="text-blue-500 underline text-sm"
+          >
+            Switch to {usertype === "user" ? "Admin" : "User"} Signup
+          </button>
+        </div>
       </form>
     </div>
   );

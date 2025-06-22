@@ -3,6 +3,8 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getSession } from "next-auth/react"; 
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,18 +14,25 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    const res = await signIn("credentials", {
+  const res = await signIn("credentials", {
       email,
       password,
       redirect: false,
     });
 
     if (res.ok) {
-      router.push("/");
+      const session = await getSession(); 
+      const role = session?.user?.role;
+
+      if (role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
     } else {
       setError("Invalid credentials");
       setLoading(false);

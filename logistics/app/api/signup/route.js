@@ -7,7 +7,7 @@ const VERIFICATION_TOKEN_EXPIRY_MINUTES = 60;
 
 export async function POST(req) {
   try {
-    const { email, password } = await req.json();
+    const { email, password , usertype } = await req.json();
     if (!email || !password) {
       return new Response(JSON.stringify({ error: "Email and password required" }), { status: 400 });
     }
@@ -22,6 +22,7 @@ export async function POST(req) {
     const user = await prisma.user.create({
       data: {
         email,
+        role: usertype || "user", // default to 'user' if not provided
         password: hashed,
         resetToken: token,
         resetExpires: expires,

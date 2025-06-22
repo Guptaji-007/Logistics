@@ -35,8 +35,8 @@ export default function Home() {
     <div className="w-full h-0.5 bg-white my-5"></div>
 
     {/* Services Sections */}
-    <section className=" min-h-[20vh] text-center mt-30 mb-10 text-7xl">
-      <span className="text-white font-bold  p-10">Our Transportation <i className="font-bold text-orange-400">Services</i></span>
+    <section className="min-h-[20vh] text-center mt-30 mb-10 text-7xl">
+      <span className="text-white font-bold  p-10">Our Transportation <i className="font-bold text-blue-400">Services</i></span>
     </section>
     <CardPulseBorder/>
 
@@ -45,8 +45,8 @@ export default function Home() {
 
 
     {/* Track Your Shipment */}
-    <section className="min-h-[20vh] text-center mt-30 mb-10 text-5xl">
-      <span className="text-white font-bold  p-10">Track Your <i className="font-bold text-orange-400">Shipment</i> in Real-Time</span>
+    <section className="min-h-[20vh] text-center mt-30 mb-10 text-5xl ">
+      <span className="text-white font-bold  p-10">Track Your <i className="font-bold text-blue-400">Shipment</i> in Real-Time</span>
       <div className="flex-col justify-center mt-5 text-amber-50 text-lg">
         <p>Stay updated with the latest information about your shipment's location and status.</p>
         <div className="flex items-center justify-center gap-2 mt-5  mx-auto">
@@ -67,7 +67,9 @@ export default function Home() {
     {/* <div className="w-ffdjkfdull h-0.5 bg-white my-5"></div> */}
 
     {/*what we do*/}
+    <div className="mt-16">
     <WhatWeDo/>
+    </div>
   </>
   );
 }

@@ -6,10 +6,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import AccountMenu from "./AccountMenu";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const router = useRouter();
 
+  if(session && session.user && session.user.role === "admin") {
+      router.push("/admin");
+  }
   return (
     <nav className="text-white p-4 flex justify-between items-center">
       <div className="flex gap-5">
