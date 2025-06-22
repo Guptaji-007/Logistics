@@ -31,6 +31,7 @@ model Driver {
   licenseNumber   String
   experienceYears Int
   address         String
+  isActive          Boolean   @default(false) // available, busy
   createdAt       DateTime @default(now())
 }
 

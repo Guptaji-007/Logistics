@@ -37,6 +37,7 @@ export async function POST(req) {
         licenseNumber,
         experienceYears: Number(experienceYears),
         address,
+        isActive: false, 
       },
     });
 
