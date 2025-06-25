@@ -8,3 +8,9 @@ npx prisma generate
 npx prisma migrate dev
 
 npm install nodemailer
+
+npm install socket.io-client
+
+//in backend
+npm install express socket.io cors @prisma/client
+npm install --save-dev prisma

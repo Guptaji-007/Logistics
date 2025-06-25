@@ -6,6 +6,7 @@ import InputPulseBorder from "./components/InputPulseBorder";
 import BookingForm from "./components/BookingForm";
 import WhatWeDo from "./components/WhatWeDo";
 import Navbar from "./components/Navbar";
+import ConfirmRide from "./components/ConfirmRide";
 
 export default function Home() {
   return (<>
@@ -70,6 +71,7 @@ export default function Home() {
     <div className="mt-16">
     <WhatWeDo/>
     </div>
+    {/* <ConfirmRide rideData={{ pickup: "Location A", dropoff: "Location B", offerPrice: 100 }} /> */}
   </>
   );
 }

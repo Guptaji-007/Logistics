@@ -35,3 +35,15 @@ model Driver {
   createdAt       DateTime @default(now())
 }
 
+model Ride {
+  id           String   @id @default(cuid())
+  userId       String
+  driverId     String
+  pickup       String
+  dropoff      String
+  status       String
+  offerPrice   Float?
+  counterPrice Float?
+  createdAt    DateTime @default(now())
+  confirmedAt  DateTime?
+}

@@ -9,6 +9,7 @@ import ActiveJob from '../DriverComponents/ActiveJob'
 import JobRequests from '../DriverComponents/JobRequest'
 const AdminPage = () => {
   const { data: session } = useSession()
+  const [activeJob, setActiveJob] = useState(null)
 
   return (
     <>
@@ -16,8 +17,11 @@ const AdminPage = () => {
        <main className="p-6 min-h-screen">
         <div className="max-w-5xl mx-auto space-y-6">
           <DriverProfile email={session?.user?.email}/>
-          <ActiveJob/>
-          <JobRequests/>
+          {activeJob ? (
+            <ActiveJob job={activeJob} />
+          ) : (
+            <JobRequests />
+          )}
         </div>
       </main>
     </>
