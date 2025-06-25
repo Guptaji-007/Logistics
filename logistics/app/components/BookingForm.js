@@ -8,7 +8,7 @@ import ConfirmRide from './ConfirmRide'; // Adjust the import path as necessary
 
 export default function BookingForm() {
     const { data: session } = useSession();
-    const [driverResponse, setDriverResponse] = useState(null);
+    const [driverResponse, setDriverResponses] = useState([]);
     const [activeJob, setActiveJob] = useState(null);
     console.log("Session data:", session);
     const {
@@ -24,17 +24,35 @@ export default function BookingForm() {
         if (!session?.user?.email) return;
         socketRef.current = io("http://localhost:4000");
         socketRef.current.emit("register", { type: "user", id: session?.user?.email });
+
         socketRef.current.on("driver_response", (data) => {
-            setDriverResponse(data); // Save the response to show confirmation UI
+            setDriverResponses(prev => {
+                // Replace if same driver, else add
+                const idx = prev.findIndex(r => r.driverId === data.driverId);
+                if (idx !== -1) {
+                    const updated = [...prev];
+                    updated[idx] = data;
+                    return updated;
+                }
+                return [...prev, data];
+            });
         });
 
         socketRef.current.on("driver_counter_response", (data) => {
-        setDriverResponse(data);
+            setDriverResponses(prev => {
+                const idx = prev.findIndex(r => r.driverId === data.driverId);
+                if (idx !== -1) {
+                    const updated = [...prev];
+                    updated[idx] = data;
+                    return updated;
+                }
+                return [...prev, data];
+            });
         });
 
         socketRef.current.on('ride_confirmed', (ride) => {
             setActiveJob(ride);
-            setDriverResponse(null); // Optionally clear pending responses
+            setDriverResponses([]); // Optionally clear all offers
         });
 
         return () => socketRef.current.disconnect();
@@ -104,14 +122,7 @@ export default function BookingForm() {
                                 {...register('details')} rows={5}
                                 className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
 
-
-                            {/* {!driverResponse && driverResponse.status === "accepted" ? (
-                                <div>
-                                    <p>Driver accepted your request!</p>
-                                    <ConfirmRide rideData={driverResponse} />
-                                </div>
-                            ) : ( */}
-                            {!driverResponse ? (
+                            {driverResponse!=undefined ? (
                                 <button
                                     type="submit"
                                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition duration-200"
@@ -130,9 +141,9 @@ export default function BookingForm() {
 
                     {driverResponse && driverResponse.status === "countered" && (
                         <div>
-                            <p>Driver has countered your offer!</p>
-                            <p>Original Offer Price: {driverResponse.offerPrice}</p>
-                            <p>Counter Offer Price: {driverResponse.counterPrice}</p>
+                            <p className='text-2xl font-semibold'>Driver has <span className='text-green-500'>countered</span> your offer!</p>
+                            <p className='font-medium'>Original Offer Price: {driverResponse.offerPrice}</p>
+                            <p className='font-medium'>Counter Offer Price: {driverResponse.counterPrice}</p>
                             <button
                                 onClick={() => {
                                     const userCounter = prompt("Enter your counter offer price:");
@@ -145,13 +156,47 @@ export default function BookingForm() {
                                         });
                                     }
                                 }}
-                                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200"
+                                className="w-full bg-black text-white py-2 mt-1 mb-1 rounded hover:bg-blue-700 transition duration-200"
                             >
                                 Counter Offer
                             </button>
                             <ConfirmRide rideData={driverResponse} />
                         </div>
                     )}
+                    {driverResponse.map((resp, idx) => (
+                        <div key={idx} className="mb-4 p-4 border rounded">
+                            {resp.status === "accepted" && (
+                                <>
+                                    <p>Driver accepted your request!</p>
+                                    <ConfirmRide rideData={resp} />
+                                </>
+                            )}
+                            {resp.status === "countered" && (
+                                <>
+                                    <p className='text-2xl font-semibold'>Driver has <span className='text-green-500'>countered</span> your offer!</p>
+                                    <p className='font-medium'>Original Offer Price: {resp.offerPrice}</p>
+                                    <p className='font-medium'>Counter Offer Price: {resp.counterPrice}</p>
+                                    <button
+                                        onClick={() => {
+                                            const userCounter = prompt("Enter your counter offer price:");
+                                            if (userCounter) {
+                                                socketRef.current.emit("user_counter_response", {
+                                                    ...resp,
+                                                    userId: session?.user?.email,
+                                                    counterPrice: parseFloat(userCounter),
+                                                    status: "user_countered",
+                                                });
+                                            }
+                                        }}
+                                        className="w-full bg-black text-white py-2 mt-1 mb-1 rounded hover:bg-blue-700 transition duration-200"
+                                    >
+                                        Counter Offer
+                                    </button>
+                                    <ConfirmRide rideData={resp} />
+                                </>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </section>
 

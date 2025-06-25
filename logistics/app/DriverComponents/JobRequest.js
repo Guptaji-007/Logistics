@@ -9,6 +9,17 @@ const JobRequests = () => {
   const [activeJob, setActiveJob] = useState(null);
   const socketRef = useRef();
   const { data: session } = useSession();
+
+  // Fetch the latest active job for this driver
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch(`/api/driver/active-ride?email=${encodeURIComponent(session.user.email)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.completed) setActiveJob(data);
+      });
+  }, [session]);
+
   useEffect(() => {
     if (!session?.user?.email) return;
     socketRef.current = io('http://localhost:4000');
@@ -70,8 +81,7 @@ const JobRequests = () => {
     <div>
       {activeJob ? (
         <ActiveJob job={activeJob} />
-      ) : null}
-      
+      ) : (
         <div className="bg-white p-4 rounded-2xl shadow">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">New Job Requests</h3>
@@ -97,6 +107,7 @@ const JobRequests = () => {
             </div>
           ))}
         </div>
+      )}
     </div>
   );
 };
