@@ -7,8 +7,11 @@ import ActiveJob from './ActiveJob';
 const JobRequests = () => {
   const [requests, setRequests] = useState([]);
   const [activeJob, setActiveJob] = useState(null);
+  const [todayEarnings, setTodayEarnings] = useState(0);
   const socketRef = useRef();
   const { data: session } = useSession();
+
+
 
   // Fetch the latest active job for this driver
   useEffect(() => {
@@ -77,10 +80,14 @@ const JobRequests = () => {
     }
   };
 
+  const handleFinish = () => {
+    setActiveJob(null);
+  };
+
   return (
     <div>
       {activeJob ? (
-        <ActiveJob job={activeJob} />
+        <ActiveJob job={activeJob} onFinish={handleFinish} />
       ) : (
         <div className="bg-white p-4 rounded-2xl shadow">
           <div className="flex justify-between items-center mb-4">

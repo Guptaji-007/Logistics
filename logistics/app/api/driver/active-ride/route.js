@@ -19,3 +19,19 @@ export async function GET(req) {
 
   return NextResponse.json(ride);
 }
+
+export async function PATCH(req) {
+  const { searchParams } = new URL(req.url);
+  const rideId = searchParams.get('rideId');
+  if (!rideId) {
+    return NextResponse.json({ error: 'Ride ID required' }, { status: 400 });
+  }
+
+  // Update the ride to mark it as completed
+  const updatedRide = await prisma.ride.update({
+    where: { id: rideId },
+    data: { completed: true},
+  });
+
+  return NextResponse.json(updatedRide);
+}

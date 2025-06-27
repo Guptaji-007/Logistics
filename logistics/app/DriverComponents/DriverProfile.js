@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Bell,User } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bell, User } from 'lucide-react';
 
-const DriverProfile = ({ email }) => {
+const DriverProfile = ({ email, refreshDriver }) => {
   const [driver, setDriver] = useState(null);
   const [active, setActive] = useState(false);
 
@@ -12,13 +12,13 @@ const DriverProfile = ({ email }) => {
     if (res.ok) {
       const data = await res.json();
       setDriver(data);
-      setActive(data.isActive); // set local state
+      setActive(data.isActive);
     }
   };
 
   const toggleActive = async () => {
     const newStatus = !active;
-    setActive(newStatus); // Optimistic UI update
+    setActive(newStatus); // optimistic update
 
     const res = await fetch('/api/driver/profile', {
       method: 'PATCH',
@@ -28,11 +28,11 @@ const DriverProfile = ({ email }) => {
 
     if (res.ok) {
       const updatedDriver = await res.json();
-      setDriver(updatedDriver); // Sync updated info
-      console.log(`Driver is now ${updatedDriver.isActive ? 'active' : 'inactive'}`);
+      setDriver(updatedDriver);
+      if (refreshDriver) refreshDriver(); // inform parent to re-fetch driver data
     } else {
       console.error('Failed to update status');
-      setActive(!newStatus); // Revert if failed
+      setActive(!newStatus); // revert if failed
     }
   };
 
@@ -43,9 +43,7 @@ const DriverProfile = ({ email }) => {
   return (
     <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow">
       <div className="flex items-center gap-4">
-        {/* <img src="/avatar.png" alt="Driver" className="w-12 h-12 rounded-full" /> */}
         <User className="ml-4 text-gray-500 cursor-pointer" />
-
         <div>
           <h2 className="text-lg font-semibold">
             {driver ? driver.fullName : "Loading..."}
@@ -54,8 +52,7 @@ const DriverProfile = ({ email }) => {
         </div>
       </div>
       <div className="text-right">
-        <p>Today: <strong>$150.00</strong></p>
-        <p>Weekly: <strong>$1,200.00</strong></p>
+        <p>Today: <strong>$0</strong></p>
       </div>
       <button
         onClick={toggleActive}
