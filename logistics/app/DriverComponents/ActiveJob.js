@@ -1,9 +1,13 @@
 import React from 'react';
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import dynamic from "next/dynamic";
+
+const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
 const ActiveJob = ({ job, onFinish }) => {
   const [startTrip, setstartTrip] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const { data: session } = useSession();
 
   const setTrip = () =>{
@@ -44,12 +48,21 @@ const ActiveJob = ({ job, onFinish }) => {
         </div>
         <p className="text-lg font-semibold">${job.counterPrice || job.offerPrice}</p>
         <div className="flex gap-4 mt-2">
-          {!startTrip ? <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={setTrip}>Start Trip</button>:
+          {!startTrip ? 
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={() => {setTrip(); setShowMap(true);}}>Start Trip</button>:
             <button className="bg-green-600 text-white px-4 py-2 rounded-lg" onClick={finishTrip}>Finish</button>
           }
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg">Navigate</button>
+          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={() => setShowMap(true)}>Navigate</button>
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg">Contact Customer</button>
         </div>
+        {showMap && (
+          <div className="h-64 mt-4">
+            <MapView
+              pickup={{ lat: job.pickupLat, lon: job.pickupLon, label: job.pickup }}
+              destination={{ lat: job.dropoffLat, lon: job.dropoffLon, label: job.dropoff }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

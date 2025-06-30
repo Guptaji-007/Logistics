@@ -11,7 +11,11 @@ app.use(express.json());
 // Save confirmed ride
 app.post("/api/rides/confirm", async (req, res) => {
   try {
-    const { userId, driverId, pickup, dropoff, offerPrice, counterPrice } = req.body;
+    const {
+      userId, driverId, pickup, pickupLat, pickupLon,
+      dropoff, dropoffLat, dropoffLon,
+      offerPrice, counterPrice
+    } = req.body;
     const parsedOfferPrice = offerPrice !== undefined ? parseFloat(offerPrice) : null;
     const parsedCounterPrice = counterPrice !== undefined ? parseFloat(counterPrice) : null;
     const ride = await prisma.ride.create({
@@ -19,7 +23,11 @@ app.post("/api/rides/confirm", async (req, res) => {
         userId,
         driverId,
         pickup,
+        pickupLat,
+        pickupLon,
         dropoff,
+        dropoffLat,
+        dropoffLon,
         status: "confirmed",
         offerPrice: parsedOfferPrice,
         counterPrice: parsedCounterPrice,

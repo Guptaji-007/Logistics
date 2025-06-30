@@ -35,16 +35,34 @@ model Driver {
   createdAt       DateTime @default(now())
 }
 
+// model Ride {
+//   id           String   @id @default(cuid())
+//   userId       String
+//   driverId     String
+//   pickup       String
+//   dropoff      String
+//   status       String
+//   offerPrice   Float?
+//   counterPrice Float?
+//   createdAt    DateTime @default(now())
+//   confirmedAt  DateTime?
+//   completed   Boolean   @default(false) 
+// }
+
 model Ride {
   id           String   @id @default(cuid())
   userId       String
   driverId     String
   pickup       String
+  pickupLat    Float?
+  pickupLon    Float?
   dropoff      String
+  dropoffLat   Float?
+  dropoffLon   Float?
   status       String
   offerPrice   Float?
   counterPrice Float?
   createdAt    DateTime @default(now())
   confirmedAt  DateTime?
-  completed   Boolean   @default(false) 
+  completed    Boolean   @default(false) 
 }

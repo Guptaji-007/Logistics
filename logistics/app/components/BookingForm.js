@@ -510,8 +510,6 @@ export default function BookingForm() {
 
                         </form>
                     
-                  
-
                     </div>
 
                       <div className=''>
