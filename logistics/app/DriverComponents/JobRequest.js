@@ -3,6 +3,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
 import ActiveJob from './ActiveJob';
+import MapView from '../components/MapView';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+
 
 const JobRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -65,7 +69,7 @@ const JobRequests = () => {
       status: 'accepted',
     });
   };
-  
+
   const handleCounter = (request) => {
     console.log('Countering request:', request);
     const counterPrice = prompt('Enter your counter offer price:');
@@ -95,6 +99,7 @@ const JobRequests = () => {
             <button className="text-blue-600 text-sm font-medium">View All</button>
           </div>
           {requests.map((req, idx) => (
+            <>
             <div key={idx} className="flex justify-between items-center py-2 border-t first:border-t-0">
               <div>
                 <p className="font-medium">{req.pickup}</p>
@@ -104,6 +109,7 @@ const JobRequests = () => {
                     ? `User Counter Offer: ${req.counterPrice}`
                     : `Offer Price: ${req.offerPrice}`}
                 </p>
+
               </div>
               <button onClick={() => handleCounter(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
                 Counter Offer
@@ -111,8 +117,19 @@ const JobRequests = () => {
               <button onClick={() => handleAccept(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
                 Accept
               </button>
+              
             </div>
+            <div>
+              <div className="h-48 w-min-3xl mt-2 rounded">
+                <MapView
+                  pickup={{ lat: req.pickupLat, lon: req.pickupLon, label: req.pickup }}
+                  destination={{ lat: req.dropoffLat, lon: req.dropoffLon, label: req.dropoff }}
+                />
+              </div>
+            </div>
+            </>
           ))}
+
         </div>
       )}
     </div>
