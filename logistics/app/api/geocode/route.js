@@ -14,7 +14,7 @@ export async function GET(req) {
 
     const response = await fetch(nominatimUrl, {
       headers: {
-        'User-Agent': 'trial-app/1.0 (logistique.ac@gmail.com)',
+        'User-Agent': env.USER_AGENT,
         'Accept-Language': 'en'
       }
     });
