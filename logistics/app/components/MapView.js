@@ -20,10 +20,10 @@ const RoutingControl = ({ pickup, destination }) => {
   const routingRef = useRef(null);
 
   useEffect(() => {
-    if (!pickup || !destination) return;
+    if (!pickup || !destination || !map) return;
 
     // Remove previous routing control if exists
-    if (routingRef.current) {
+    if (routingRef.current && map) {
       try {
         map.removeControl(routingRef.current);
       } catch {}
@@ -45,7 +45,7 @@ const RoutingControl = ({ pickup, destination }) => {
     routingRef.current = routingControl;
 
     return () => {
-      if (routingRef.current) {
+      if (routingRef.current && map) {
         try {
           map.removeControl(routingRef.current);
         } catch {}
