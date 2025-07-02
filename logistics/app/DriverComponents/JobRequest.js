@@ -6,6 +6,7 @@ import ActiveJob from './ActiveJob';
 import MapView from '../components/MapView';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import { set } from 'react-hook-form';
 
 
 const JobRequests = () => {
@@ -14,7 +15,7 @@ const JobRequests = () => {
   const [todayEarnings, setTodayEarnings] = useState(0);
   const socketRef = useRef();
   const { data: session } = useSession();
-
+  const [acceptDisabled,setAcceptDisabled] = useState(false);
 
 
   // Fetch the latest active job for this driver
@@ -63,6 +64,10 @@ const JobRequests = () => {
   const handleAccept = (request) => {
     console.log("Button clicked");
     console.log('Accepting request:', request);
+    setAcceptDisabled(true);
+    setTimeout(() => {
+      setAcceptDisabled(false);
+    }, 10000);
     socketRef.current.emit('driver_response', {
       ...request,
       driverId: session?.user?.email,
@@ -114,10 +119,16 @@ const JobRequests = () => {
               <button onClick={() => handleCounter(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
                 Counter Offer
               </button>
-              <button onClick={() => handleAccept(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
+              {/* <button onClick={() => handleAccept(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
                 Accept
-              </button>
-              
+              </button> */}
+               <button
+                  onClick={() => handleAccept(req)}
+                  className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={acceptDisabled}
+                >
+                  Accept
+                </button>
             </div>
             <div>
               <div className="h-48 w-min-3xl mt-2 rounded">
