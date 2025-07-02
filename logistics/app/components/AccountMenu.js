@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import AboutIcon from '@mui/icons-material/Info';
 import ContactIcon from '@mui/icons-material/ContactMail';
+import Link from 'next/link';
 
 export default function AccountMenu() {
   const { data: session } = useSession();
@@ -85,9 +86,16 @@ export default function AccountMenu() {
       >
         <MenuItem><Avatar /> {session?.user?.email}</MenuItem>
         <Divider />
-        <MenuItem><ListItemIcon><Settings fontSize="small" /></ListItemIcon>Settings</MenuItem>
-        <MenuItem><ListItemIcon><AboutIcon fontSize="small" /></ListItemIcon>About</MenuItem>
-        <MenuItem><ListItemIcon><ContactIcon fontSize="small" /></ListItemIcon>Contact</MenuItem>
+
+        <Link href="/order-history" passHref>
+          <MenuItem><ListItemIcon><AboutIcon fontSize="small" /></ListItemIcon>Order History</MenuItem>
+        </Link>
+        <Link href="/settings" passHref>
+          <MenuItem><ListItemIcon><Settings fontSize="small" /></ListItemIcon>Settings</MenuItem>
+        </Link>
+        <Link href="/contact" passHref>
+          <MenuItem><ListItemIcon><ContactIcon fontSize="small" /></ListItemIcon>Contact</MenuItem>
+        </Link>
         <MenuItem onClick={handleSignOut}>
           <ListItemIcon><Logout fontSize="small" /></ListItemIcon>Logout
         </MenuItem>
