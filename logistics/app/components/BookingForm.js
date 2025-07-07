@@ -9,7 +9,6 @@ import dynamic from "next/dynamic";
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 
-
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
 export default function BookingForm() {
@@ -30,6 +29,8 @@ export default function BookingForm() {
     const [distance, setDistance] = useState(null);
     const [justSelected, setJustSelected] = useState(false);
 
+    const pickupLat = selectedPickup ? selectedPickup.lat : null;
+    const pickupLon = selectedPickup ? selectedPickup.lon : null;
 
     const {
         register,
@@ -171,7 +172,7 @@ export default function BookingForm() {
             dropoffLon: data.dropoffLon,
         });
         reset();
-        setSelectedPickup(null);
+        // setSelectedPickup(null);
         setSelectedDropoff(null);
         setPickupQuery('');
         setDropoffQuery('');
@@ -385,6 +386,8 @@ export default function BookingForm() {
                                                     userId: session?.user?.email,
                                                     counterPrice: parseFloat(userCounter),
                                                     status: "user_countered",
+                                                    pickupLat: pickupLat,
+                                                    pickupLon: pickupLon,
                                                 });
                                             }
                                         }}

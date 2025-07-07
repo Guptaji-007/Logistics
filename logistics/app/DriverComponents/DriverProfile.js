@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Bell, User } from 'lucide-react';
+import CurrentLocation from './CurrentLocation';
+
 
 const DriverProfile = ({ email, refreshDriver }) => {
   const [driver, setDriver] = useState(null);
@@ -63,6 +65,7 @@ const DriverProfile = ({ email, refreshDriver }) => {
         {active ? 'Active' : 'Inactive'}
       </button>
       <Bell className="ml-4 text-gray-500 cursor-pointer" />
+      <CurrentLocation/>
     </div>
   );
 };

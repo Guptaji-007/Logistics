@@ -6,8 +6,6 @@ import ActiveJob from './ActiveJob';
 import MapView from '../components/MapView';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
-import { set } from 'react-hook-form';
-
 
 const JobRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -16,7 +14,21 @@ const JobRequests = () => {
   const socketRef = useRef();
   const { data: session } = useSession();
   const [acceptDisabled,setAcceptDisabled] = useState(false);
+  const [driverLocation, setDriverLocation] = useState(null);
 
+  console.log("Session data:", session);
+
+  // fetch the drivers location
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch(`/api/fetch-location?driver_email=${encodeURIComponent(session.user.email)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.location) setDriverLocation(data.location);
+      });
+  }, [session]);
+
+  console.log("Driver Location:", driverLocation);
 
   // Fetch the latest active job for this driver
   useEffect(() => {
@@ -29,9 +41,10 @@ const JobRequests = () => {
   }, [session]);
 
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.email || !driverLocation) return;
     socketRef.current = io('http://localhost:4000');
-    socketRef.current.emit('register', { type: 'driver', id: session?.user?.email });
+    socketRef.current.emit('register', { type: 'driver', id: session?.user?.email , lat: driverLocation.latitude,
+    lon: driverLocation.longitude});
 
     socketRef.current.on('new_ride_request', (data) => {
       setRequests((prev) => [...prev, data]);
@@ -59,7 +72,7 @@ const JobRequests = () => {
     });
 
     return () => socketRef.current.disconnect();
-  }, [session]);
+  }, [session, driverLocation]);
 
   const handleAccept = (request) => {
     console.log("Button clicked");

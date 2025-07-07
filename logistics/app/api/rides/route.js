@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 
 
 export async function GET(req) {
-    const { searchParams } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
   const userEmail = searchParams.get('userEmail'); 
     if (!userEmail) {
         return NextResponse.json({ error: 'User email required' }, { status: 400 });
