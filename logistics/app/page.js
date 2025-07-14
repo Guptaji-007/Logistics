@@ -1,4 +1,4 @@
-import Image from "next/image";
+"use client";
 import RotatingText from "./components/RotatingText";
 import CardPulseBorder from "./components/CardPulseBorder";
 import ButtonBackgroundShine from "./components/ButtonBackgroundShine";
@@ -6,9 +6,12 @@ import InputPulseBorder from "./components/InputPulseBorder";
 import BookingForm from "./components/BookingForm";
 import WhatWeDo from "./components/WhatWeDo";
 import Navbar from "./components/Navbar";
-import ConfirmRide from "./components/ConfirmRide";
+import Link from "next/link";
+import { useState } from "react";
 
 export default function Home() {
+  const [trackingId, setTrackingId] = useState("");
+
   return (<>
     {/* initial home page */}
     <Navbar/>
@@ -51,8 +54,14 @@ export default function Home() {
       <div className="flex-col justify-center mt-5 text-amber-50 text-lg">
         <p>Stay updated with the latest information about your shipment's location and status.</p>
         <div className="flex items-center justify-center gap-2 mt-5  mx-auto">
-          <InputPulseBorder className="mt-6 w-full max-w-md" />
-          <ButtonBackgroundShine className="whitespace-nowrap" label="Track" />
+          <InputPulseBorder
+            className="w-full max-w-md"
+            trackingId={trackingId}
+            setTrackingId={setTrackingId}
+          />
+          <Link href={`/trackShipment?id=${trackingId}`}>
+            <ButtonBackgroundShine className="whitespace-nowrap" label="Track" />
+          </Link>
         </div>
       </div>
     </section>
@@ -71,7 +80,6 @@ export default function Home() {
     <div className="mt-16">
     <WhatWeDo/>
     </div>
-    {/* <ConfirmRide rideData={{ pickup: "Location A", dropoff: "Location B", offerPrice: 100 }} /> */}
   </>
   );
 }

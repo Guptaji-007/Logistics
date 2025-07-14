@@ -1,7 +1,8 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from "next/dynamic";
+import { io } from "socket.io-client";
 
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
@@ -9,10 +10,52 @@ const ActiveJob = ({ job, onFinish }) => {
   const [startTrip, setstartTrip] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const { data: session } = useSession();
+  const watchIdRef = useRef(null);
+  const socketRef = useRef();
 
-  const setTrip = () =>{
+  useEffect(() => {
+    socketRef.current = io("http://localhost:4000");
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, []);
+
+  const setTrip = () => {
     setstartTrip(!startTrip);
-  }
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported");
+      return;
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        socketRef.current.emit("register1", { type: "driver", id: session.user.email, lat: latitude, lon: longitude, rideId: job.id });
+        socketRef.current.emit("driver_location_update", {
+          rideId: job.id,
+          lat: latitude,
+          lon: longitude,
+        });
+        console.log("Sent location:", latitude, longitude);
+      },
+      (error) => {
+        console.error("Error watching location", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  const stopLiveLocation = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      console.log("Stopped live location tracking");
+    }
+  };
 
   const finishTrip = () => {
     // Call the API to finish the trip
@@ -33,6 +76,12 @@ const ActiveJob = ({ job, onFinish }) => {
       });
   }
 
+  useEffect(() => {
+    return () => stopLiveLocation();
+  }, []);
+
+
+
   if (!job) return null;
   return (
     <div className="bg-white p-4 rounded-2xl shadow">
@@ -48,8 +97,8 @@ const ActiveJob = ({ job, onFinish }) => {
         </div>
         <p className="text-lg font-semibold">${job.counterPrice || job.offerPrice}</p>
         <div className="flex gap-4 mt-2">
-          {!startTrip ? 
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={() => {setTrip(); setShowMap(true);}}>Start Trip</button>:
+          {!startTrip ?
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={() => { setTrip(); setShowMap(true); }}>Start Trip</button> :
             <button className="bg-green-600 text-white px-4 py-2 rounded-lg" onClick={finishTrip}>Finish</button>
           }
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={() => setShowMap(true)}>Navigate</button>

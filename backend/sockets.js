@@ -1,6 +1,8 @@
 let io;
 const drivers = {};
 const users = {};
+const activeRides = require("./activeRides");
+
 
 function setupSocket(server) {
   io = require("socket.io")(server, {
@@ -23,12 +25,52 @@ function setupSocket(server) {
       socket.on("register", ({ type, id, lat, lon }) => {
           if (type === "driver") {
             drivers[socket.id] = { id, lat, lon };
+            // Update activeRides with new driver socket id for all rides of this driver
+            // Object.entries(activeRides).forEach(([rideId, ride]) => {
+            //   if (ride.driverId === id) {
+            //     ride.driverSocketId = socket.id;
+            //     console.log(`Updated activeRides for ride ${rideId}: new driverSocketId = ${socket.id}`);
+            //   }
+            // });
           }
           if (type === "user") users[socket.id] = id;
+          // if (type === "user") {
+          //   users[socket.id] = id;
+            // Object.entries(activeRides).forEach(([rideId, ride]) => {
+            //   if (ride.userId === id) {
+            //     ride.userSocketId = socket.id;
+            //     console.log(`Updated activeRides for ride ${rideId}: new user SocketId = ${socket.id}`);
+            //   }
+            // });
+          // }
+
           console.log(`New client connected: ${socket.id} (${type})`);
           console.log("Current users:", users);
           console.log("Current drivers:", drivers);
     });
+
+
+    socket.on("register1", ({ type, id, rideId, lat, lon }) => {
+      if (type === "driver") {
+        drivers[socket.id] = { id, lat, lon };
+        if (rideId) {
+          const room = `ride-${rideId}`;
+          socket.join(room);
+          // Optionally update activeRides here if needed
+          console.log(`Driver ${id} joined room ${room}`);
+        }
+      }
+      if (type === "user") {
+        users[socket.id] = id;
+        if (rideId) {
+          const room = `ride-${rideId}`;
+          socket.join(room);
+          console.log(`User ${id} joined room ${room}`);
+        }
+      }
+      console.log(`New client connected: ${socket.id} (${type})`);
+    });
+
 
     socket.on("ride_request", (data) => {
         console.log("Ride request received:", data);
@@ -80,6 +122,35 @@ function setupSocket(server) {
       } else {
         console.log("Driver not connected for user counter response:", data.driverId);
       }
+    });
+
+    // socket.on("driver_location_update", ({ rideId, lat, lon }) => {
+    //   const ride = activeRides[rideId];
+    //   const driver = drivers[socket.id];
+    //   console.log("driver_location_update received from socket:", socket.id, "for ride:", rideId);
+    //   if (ride) {
+    //     console.log("Expected driverId:", ride.driverId);
+    //   }
+    //   // if (ride && ride.driverId && drivers[socket.id] && drivers[socket.id].id === ride.driverId) {
+    //   //   io.to(ride.userSocketId).emit("driver_location", { lat, lon, rideId });
+    //   //   console.log("Emitted driver_location to userSocketId:", ride.userSocketId);
+    //   // } else {
+    //   //   console.log("driver_location_update ignored: not the assigned driver");
+    //   // }
+    //   // if (ride && ride.driverSocketId === socket.id) {
+    //   if (ride && ride.driverId === driver.id ) {
+        
+    //     io.to(ride.userSocketId).emit("driver_location", { lat, lon, rideId });
+    //     console.log("Emitted driver_location to userSocketId: email", users[ride.userSocketId], "rideId:", rideId, "lat:", lat, "lon:", lon);
+    //   } else {
+    //     console.log("driver_location_update ignored: not the assigned driver socket");
+    //   }
+    // });
+    socket.on("driver_location_update", ({ rideId, lat, lon }) => {
+      if (!rideId) return;
+      const room = `ride-${rideId}`;
+      io.to(room).emit("driver_location", { lat, lon, rideId });
+      // Optionally log or handle errors
     });
 
     socket.on("disconnect", () => {
