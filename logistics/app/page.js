@@ -57,7 +57,7 @@ export default function Home() {
     <section className="min-h-[20vh] text-center mt-10 mb-10 text-3xl md:text-5xl px-4">
       <span className="text-white font-bold p-2 md:p-10">Track Your <i className="font-bold text-yellow-500">Shipment</i> in Real-Time</span>
       <div className="flex-col justify-center mt-5 text-amber-50 text-base md:text-lg">
-        <p>Stay updated with the latest information about your shipment&apos;s location and status.</p>
+        <p>Stay updated with the latest information about your {`shipment's`} location and status.</p>
         {/* Changed to flex-col on mobile, stacking the input and button */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-5 mx-auto max-w-md sm:max-w-none">
           <InputPulseBorder

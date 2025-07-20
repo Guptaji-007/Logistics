@@ -62,7 +62,7 @@ const DriverProfile = ({ email, refreshDriver }) => {
         
         {/* Earnings */}
         <div className="text-left sm:text-right">
-          <p className="text-sm text-gray-500">Today&apos;s Earnings</p>
+          <p className="text-sm text-gray-500">{`Today's`} Earnings</p>
           <p className="font-bold text-gray-900">$0.00</p>
         </div>
 
