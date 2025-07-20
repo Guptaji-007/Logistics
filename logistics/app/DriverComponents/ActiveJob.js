@@ -22,13 +22,43 @@ const ActiveJob = ({ job, onFinish }) => {
     };
   }, []);
 
-  const setTrip = () => {
-    setstartTrip(!startTrip);
-    if (typeof window !== "undefined" && navigator.geolocation)  {
-      alert("Geolocation not supported");
-      return;
-    }
+  // const setTrip = () => {
+  //   setstartTrip(!startTrip);
+  //   if (typeof window !== "undefined" && navigator.geolocation)  {
+  //     alert("Geolocation not supported");
+  //     return;
+  //   }
 
+  //   watchIdRef.current = navigator.geolocation.watchPosition(
+  //     (position) => {
+  //       const { latitude, longitude } = position.coords;
+  //       setDriverLocation({ lat: latitude, lon: longitude });
+  //       socketRef.current.emit("register1", { type: "driver", id: session.user.email, lat: latitude, lon: longitude, rideId: job.id });
+  //       socketRef.current.emit("driver_location_update", {
+  //         rideId: job.id,
+  //         lat: latitude,
+  //         lon: longitude,
+  //       });
+  //       console.log("Sent location:", latitude, longitude);
+  //     },
+  //     (error) => {
+  //       console.error("Error watching location", error);
+  //     },
+  //     {
+  //       enableHighAccuracy: true,
+  //       timeout: 10000,
+  //       maximumAge: 0,
+  //     }
+  //   );
+  // };
+
+const setTrip = () => {
+  setstartTrip(!startTrip);
+
+  // CORRECT LOGIC:
+  // Check if we are in the browser AND geolocation is supported.
+  if (typeof window !== 'undefined' && navigator.geolocation) {
+    // If yes, run the geolocation code inside this block.
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -50,7 +80,12 @@ const ActiveJob = ({ job, onFinish }) => {
         maximumAge: 0,
       }
     );
-  };
+  } else {
+    // If no, alert the user and do nothing else.
+    alert("Geolocation is not supported by this browser.");
+  }
+};
+
 
   const stopLiveLocation = () => {
     if (watchIdRef.current !== null) {
