@@ -183,7 +183,7 @@ export default function LoginPage() {
 
               {/* Link to Sign Up */}
               <div className="text-center text-sm">
-                <span className="text-gray-600">Don't have an account? </span>
+                <span className="text-gray-600">Do not have an account? </span>
                 <Link href="/signup" className="text-green-500 underline text-sm text-center">Sign up</Link>
               </div>
             </form>
