@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Logistics Platform
 
-## Getting Started
+A modern logistics and ride-hailing platform built with **Next.js**, **Node.js**, **Prisma**, **PostgreSQL**, and **PostGIS**. This project enables real-time ride management, driver tracking, and spatial queries for finding nearby drivers using geolocation.
 
-First, run the development server:
+## Features
 
-```bash
+- User and driver authentication
+- Real-time ride requests and status updates
+- Driver location tracking with PostGIS
+- Spatial queries to find nearby drivers
+- RESTful API and WebSocket support
+- Supabase integration for managed PostgreSQL/PostGIS
+- Modern frontend with Next.js
+
+## Tech Stack
+
+- **Frontend:** Next.js (React)
+- **Backend:** Node.js, Express
+- **Database:** PostgreSQL with PostGIS extension
+- **ORM:** Prisma
+- **Real-time:** WebSockets
+- **Hosting:** Vercel (frontend), Supabase (database)
+
+3. Set up environment variables
+
+4. Set up the database:
+
+Ensure PostgreSQL is running and PostGIS is enabled.
+Run Prisma migrations:
+cd backend
+npx prisma migrate deploy
+
+5. Start the development servers:
+Backend:
+cd backend
+nodemon server.js
+
+Frontend:
+cd logistics
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+6. Open the app:
+Visit http://localhost:3000 in your browser.
