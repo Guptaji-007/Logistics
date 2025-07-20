@@ -19,7 +19,9 @@ export default function RootLayout({ children }) {
             <div className="absolute -z-20 top-[-20%] left-1/2 -translate-x-1/2 h-[120vh] w-[120vw] max-w-[1200px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(251,251,251,0.1),rgba(0,0,0,0))]"></div>
             
             <ClientOnly>
-              <ThemeRegistry>{children}</ThemeRegistry>
+              {/* <ThemeRegistry> */}
+                {children}
+              {/* </ThemeRegistry> */}
             </ClientOnly>
           </main>
           <footer className="fixed bottom-0 text-center text-gray-500 text-sm p-4 w-full z-50">

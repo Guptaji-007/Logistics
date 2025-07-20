@@ -8,6 +8,7 @@ export async function middleware(request) {
   // Only run middleware for /admin routes
   if (request.nextUrl.pathname.startsWith(ADMIN_PATH)) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+
     if (!token || token.role !== ADMIN_ROLE) {
       // Redirect to login or show 403
       return NextResponse.redirect(new URL("/login", request.url));
