@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 
+html {
+  scroll-behavior: smooth;
+}
 
 @layer utilities {
   @keyframes border-width {
@@ -31,3 +34,4 @@
     animation: background-shine 2s linear infinite;
   }
 }
+

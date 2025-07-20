@@ -8,6 +8,11 @@ const activeRides = require("./activeRides"); // Import active rides management
 
 const app = express();
 app.use(cors({ origin: "http://localhost:3000" }));
+// app.use(cors({
+//     origin: "*", // ⚠️ For dev only. Use specific domains in production!
+//     methods: ["GET", "POST"],
+//     credentials: true,
+//   }));
 app.use(express.json());
 
 // Save confirmed ride

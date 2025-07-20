@@ -43,31 +43,47 @@ const DriverProfile = ({ email, refreshDriver }) => {
   }, [email]);
 
   return (
-    <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow">
+    // Main container: Stacks vertically on mobile, horizontally on small screens and up.
+    <>
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-4 rounded-2xl shadow-md gap-4">
+      
+      {/* Driver Info Section */}
       <div className="flex items-center gap-4">
-        <User className="ml-4 text-gray-500 cursor-pointer" />
+        <User className="w-10 h-10 text-gray-500 flex-shrink-0" />
         <div>
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-gray-900">
             {driver ? driver.fullName : "Loading..."}
           </h2>
           <p className="text-sm text-gray-500">Driver</p>
         </div>
       </div>
-      <div className="text-right">
-        <p>Today: <strong>$0</strong></p>
+
+      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-x-6 gap-y-4">
+        
+        {/* Earnings */}
+        <div className="text-left sm:text-right">
+          <p className="text-sm text-gray-500">Today's Earnings</p>
+          <p className="font-bold text-gray-900">$0.00</p>
+        </div>
+
+        {/* Icons are grouped together */}
+        <div className="flex items-center gap-4">
+            <Bell className="text-gray-500 cursor-pointer w-6 h-6" />
+            <CurrentLocation/>
+        </div>
+
+        <button
+          onClick={toggleActive}
+          className={`w-full sm:w-auto order-first sm:order-none px-4 py-2 rounded-lg font-semibold text-sm transition duration-300 ${
+            active ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+          }`}
+        >
+          {active ? 'Active' : 'Inactive'}
+        </button>
+
       </div>
-      <button
-        onClick={toggleActive}
-        className={`px-4 py-2 rounded transition duration-300 ${
-          active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-        }`}
-      >
-        {active ? 'Active' : 'Inactive'}
-      </button>
-      <Bell className="ml-4 text-gray-500 cursor-pointer" />
-      <CurrentLocation/>
     </div>
+    </>
   );
 };
-
 export default DriverProfile;

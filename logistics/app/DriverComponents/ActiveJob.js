@@ -12,6 +12,7 @@ const ActiveJob = ({ job, onFinish }) => {
   const { data: session } = useSession();
   const watchIdRef = useRef(null);
   const socketRef = useRef();
+  const [driverLocation, setDriverLocation] = useState(null);
 
   useEffect(() => {
     socketRef.current = io("http://localhost:4000");
@@ -30,6 +31,7 @@ const ActiveJob = ({ job, onFinish }) => {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        setDriverLocation({ lat: latitude, lon: longitude });
         socketRef.current.emit("register1", { type: "driver", id: session.user.email, lat: latitude, lon: longitude, rideId: job.id });
         socketRef.current.emit("driver_location_update", {
           rideId: job.id,
@@ -109,6 +111,7 @@ const ActiveJob = ({ job, onFinish }) => {
             <MapView
               pickup={{ lat: job.pickupLat, lon: job.pickupLon, label: job.pickup }}
               destination={{ lat: job.dropoffLat, lon: job.dropoffLon, label: job.dropoff }}
+              driverLocation={driverLocation}
             />
           </div>
         )}

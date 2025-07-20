@@ -1,5 +1,5 @@
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
-import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, useMap,Marker } from 'react-leaflet';
+import { useEffect, useRef,useState } from 'react';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
 
@@ -22,11 +22,12 @@ const RoutingControl = ({ pickup, destination }) => {
   useEffect(() => {
     if (!pickup || !destination || !map) return;
 
-    // Remove previous routing control if exists
-    if (routingRef.current && map) {
+    if (routingRef.current && routingRef.current._container && map) {
       try {
         map.removeControl(routingRef.current);
-      } catch {}
+      } catch (err) {
+        console.warn("Error removing routing control:", err);
+      }
     }
 
     const routingControl = L.Routing.control({
@@ -44,20 +45,56 @@ const RoutingControl = ({ pickup, destination }) => {
 
     routingRef.current = routingControl;
 
-    return () => {
-      if (routingRef.current && map) {
-        try {
-          map.removeControl(routingRef.current);
-        } catch {}
-        routingRef.current = null;
+  return () => {
+    if (
+      routingRef.current &&
+      routingRef.current._container &&
+      map.hasLayer(routingRef.current)
+    ) {
+      try {
+        map.removeControl(routingRef.current);
+      } catch (err) {
+        console.warn("Cleanup error in RoutingControl:", err);
       }
-    };
-  }, [pickup, destination, map]);
+    }
+    routingRef.current = null;
+  };
+}, [pickup, destination, map]);
 
   return null;
 };
 
-const MapView = ({ pickup, destination }) => {
+
+const driverIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048315.png', // you can use a custom image
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
+
+
+
+
+const MapView = ({ pickup, destination , driverLocation}) => {
+  
+  const [position, setPosition] = useState(null);
+
+  useEffect(() => {
+    if (driverLocation) {
+      setPosition([driverLocation.lat, driverLocation.lon]);
+    }
+  }, [driverLocation]);
+
+  if (!pickup || !destination) return null;
+
+  if (
+  !pickup ||
+  !destination ||
+  pickup.lat == null ||
+  pickup.lon == null ||
+  destination.lat == null ||
+  destination.lon == null
+) return null;
+
   return (
     <MapContainer
       center={[pickup.lat, pickup.lon]}
@@ -69,8 +106,14 @@ const MapView = ({ pickup, destination }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <RoutingControl pickup={pickup} destination={destination} />
+
+      {position && (
+       <Marker position={position} icon={driverIcon} />
+      )}
     </MapContainer>
   );
 };
 
 export default MapView;
+
+

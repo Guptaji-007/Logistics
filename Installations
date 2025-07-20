@@ -14,6 +14,10 @@ npm install socket.io-client
 //in backend
 npm install express socket.io cors @prisma/client
 npm install --save-dev prisma
-9257* npm install leaflet react-leaflet\n
- 9258* npm run dev
- 9259* npm install leaflet-routing-machine\n
+npm install leaflet react-leaflet
+npm run dev
+npm install leaflet-routing-machine
+
+
+npm i lenis
+npm install lottie-react

@@ -132,9 +132,6 @@ const JobRequests = () => {
               <button onClick={() => handleCounter(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
                 Counter Offer
               </button>
-              {/* <button onClick={() => handleAccept(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
-                Accept
-              </button> */}
                <button
                   onClick={() => handleAccept(req)}
                   className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}

@@ -7,6 +7,12 @@ const activeRides = require("./activeRides");
 function setupSocket(server) {
   io = require("socket.io")(server, {
     cors: { origin: "http://localhost:3000" }
+
+  //   cors: {
+  //   origin: "*", // ⚠️ For dev only. Use specific domains in production!
+  //   methods: ["GET", "POST"],
+  //   credentials: true,
+  // },
   });
 
   const haversine = (lat1, lon1, lat2, lon2) => {
@@ -161,3 +167,5 @@ function setupSocket(server) {
 }
 
 module.exports = { setupSocket, drivers, users, getIO: () => io };
+
+
