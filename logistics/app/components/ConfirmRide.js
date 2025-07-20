@@ -2,7 +2,7 @@
 export default function ConfirmRide({ rideData }) {
     const handleConfirm = async () => {
         // const res = await fetch("http://localhost:4000/api/rides/confirm", {
-        const res = await fetch("https://logistics-zh4o.onrender.com/api/rides/confirm", {
+        const res = await fetch("https://logistics-seven-omega.vercel.app//api/rides/confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(rideData),
