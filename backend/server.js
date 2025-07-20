@@ -7,7 +7,12 @@ const prisma = require("./prismaClient");
 const activeRides = require("./activeRides"); // Import active rides management
 
 const app = express();
-app.use(cors({ origin: "http://localhost:3000" }));
+// app.use(cors({ origin: "http://localhost:3000" }));
+app.use(cors({
+  origin: "https://logistics-ankits-projects-8e1d9412.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 // app.use(cors({
 //     origin: "*", // ⚠️ For dev only. Use specific domains in production!
 //     methods: ["GET", "POST"],

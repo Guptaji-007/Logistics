@@ -6,7 +6,12 @@ const activeRides = require("./activeRides");
 
 function setupSocket(server) {
   io = require("socket.io")(server, {
-    cors: { origin: "http://localhost:3000" }
+    // cors: { origin: "http://localhost:3000" }
+    cors : {
+  origin: "https://logistics-ankits-projects-8e1d9412.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+  }
 
   //   cors: {
   //   origin: "*", // ⚠️ For dev only. Use specific domains in production!
