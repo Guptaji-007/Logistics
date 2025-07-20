@@ -15,7 +15,8 @@ const ActiveJob = ({ job, onFinish }) => {
   const [driverLocation, setDriverLocation] = useState(null);
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:4000");
+    // socketRef.current = io("http://localhost:4000");
+    socketRef.current = io("https://logistics-zh4o.onrender.com");
     return () => {
       socketRef.current.disconnect();
     };
