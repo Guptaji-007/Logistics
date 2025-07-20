@@ -13,11 +13,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
-// app.use(cors({
-//     origin: "*", // ⚠️ For dev only. Use specific domains in production!
-//     methods: ["GET", "POST"],
-//     credentials: true,
-//   }));
 app.use(express.json());
 
 // Save confirmed ride

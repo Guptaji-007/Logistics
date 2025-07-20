@@ -1,11 +1,18 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import dynamic from 'next/dynamic';
 
 import AdminNav from '../DriverComponents/AdminNav'
-import DriverProfile from '../DriverComponents/DriverProfile'
+// import DriverProfile from '../DriverComponents/DriverProfile'
 import ActiveJob from '../DriverComponents/ActiveJob'
 import JobRequests from '../DriverComponents/JobRequest'
+
+const DriverProfile = dynamic(
+  () => import('../DriverComponents/DriverProfile'),
+  { ssr: false }
+);
+
 
 const AdminPage = () => {
   const { data: session } = useSession()

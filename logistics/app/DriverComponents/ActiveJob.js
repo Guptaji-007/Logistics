@@ -24,7 +24,7 @@ const ActiveJob = ({ job, onFinish }) => {
 
   const setTrip = () => {
     setstartTrip(!startTrip);
-    if (!navigator.geolocation) {
+    if (typeof window !== "undefined" && navigator.geolocation)  {
       alert("Geolocation not supported");
       return;
     }
