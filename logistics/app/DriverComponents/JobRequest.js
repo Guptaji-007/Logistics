@@ -43,7 +43,7 @@ const JobRequests = () => {
   useEffect(() => {
     if (!session?.user?.email || !driverLocation) return;
     // socketRef.current = io('http://localhost:4000');
-    socketRef.current = io('https://logistics-seven-omega.vercel.app/');
+    socketRef.current = io('https://logistics-hs8g.vercel.app');
     socketRef.current.emit('register', { type: 'driver', id: session?.user?.email , lat: driverLocation.latitude,
     lon: driverLocation.longitude});
 

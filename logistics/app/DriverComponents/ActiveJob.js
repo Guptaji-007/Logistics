@@ -16,7 +16,7 @@ const ActiveJob = ({ job, onFinish }) => {
 
   useEffect(() => {
     // socketRef.current = io("http://localhost:4000");
-    socketRef.current = io("https://logistics-seven-omega.vercel.app/");
+    socketRef.current = io("https://logistics-hs8g.vercel.app");
     return () => {
       socketRef.current.disconnect();
     };
