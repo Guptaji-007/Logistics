@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState , useEffect} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react"; // Import signOut
@@ -26,10 +26,11 @@ export default function Navbar() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  if (session?.user?.role === "admin") {
-    router.replace("/admin");
-    return null; 
-  }
+  useEffect(() => {
+    if (session?.user?.role === "admin") {
+      router.replace("/admin");
+    }
+  }, [session, router]);
 
   return (
     // The nav container needs a z-index to establish a stacking context for the mobile menu.

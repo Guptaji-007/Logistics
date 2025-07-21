@@ -3,7 +3,8 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getSession } from "next-auth/react";
+// The getSession import is no longer needed in the handler
+// import { getSession } from "next-auth/react";
 
 
 const MailIcon = (props) => (
@@ -41,66 +42,32 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      // The fix is to remove `redirect: false` and the manual `getSession()` call.
+      // This allows NextAuth to handle the session creation and redirection reliably,
+      // which prevents the race condition that happens in production environments.
+      const res = await signIn("credentials", {
+        email,
+        password,
+        // We set a default callbackUrl. Your middleware will correctly protect
+        // the /admin route and only allow users with the 'admin' role to access it.
+        callbackUrl: "/",
+      });
 
-    if (res.ok) {
-      const session = await getSession();
-      const role = session?.user?.role;
-
-      if (role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/");
+      // If signIn returns with an error, it means the user was redirected back here.
+      // We can display a generic error message.
+      if (res && res.error) {
+        setError("Invalid credentials. Please try again.");
+        setLoading(false);
       }
-    } else {
-      setError("Invalid credentials");
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("An unexpected error occurred.");
       setLoading(false);
     }
   };
 
   return (
-    // <div className="flex flex-col items-center justify-center min-h-screen bg-amber-50">
-    //   <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">
-    //     <h2 className="text-2xl font-bold mb-2">Login</h2>
-
-    //     <input
-    //       type="email"
-    //       placeholder="Email"
-    //       className="border p-2 rounded"
-    //       value={email}
-    //       onChange={(e) => setEmail(e.target.value)}
-    //       required
-    //     />
-
-    //     <input
-    //       type="password"
-    //       placeholder="Password"
-    //       className="border p-2 rounded"
-    //       value={password}
-    //       onChange={(e) => setPassword(e.target.value)}
-    //       required
-    //     />
-
-    //     {error && <div className="text-red-500 text-sm">{error}</div>}
-
-    //     <button
-    //       type="submit"
-    //       className={`bg-black text-white p-2 rounded ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
-    //       disabled={loading}
-    //     >
-    //       {loading ? "Signing in..." : "Log In"}
-    //     </button>
-
-    //     <Link href="/signup" className="text-green-500 underline text-sm text-center">
-    //       Don't have an account? Sign up
-    //     </Link>
-    //   </form>
-    // </div>
-
     <>
       {/* Grid background */}
       <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]"></div>
