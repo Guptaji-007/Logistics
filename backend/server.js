@@ -8,7 +8,8 @@ const activeRides = require("./activeRides"); // Import active rides management
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://logistics-ankits-projects-8e1d9412.vercel.app"
+  "https://logistics-ankits-projects-8e1d9412.vercel.app",
+  "https://logistics-hs8g.vercel.app"
 ];
 
 const app = express();
