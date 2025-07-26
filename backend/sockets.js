@@ -16,12 +16,6 @@ function setupSocket(server) {
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true
     }
-
-  //   cors: {
-  //   origin: "*", // ⚠️ For dev only. Use specific domains in production!
-  //   methods: ["GET", "POST"],
-  //   credentials: true,
-  // },
   });
 
   const haversine = (lat1, lon1, lat2, lon2) => {
@@ -63,6 +57,14 @@ function setupSocket(server) {
           console.log("Current users:", users);
           console.log("Current drivers:", drivers);
     });
+  
+     socket.on("update_driver_location", (data) => {
+      if(drivers[socket.id]) {
+          drivers[socket.id].lat = data.lat;
+          drivers[socket.id].lon = data.lon;
+          console.log(`Updated location for driver ${socket.id}:`, data);
+      }
+  });
 
 
     socket.on("register1", ({ type, id, rideId, lat, lon }) => {

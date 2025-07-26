@@ -6,13 +6,26 @@ const prisma = require("./prismaClient");
 
 const activeRides = require("./activeRides"); // Import active rides management
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://logistics-ankits-projects-8e1d9412.vercel.app"
+];
+
 const app = express();
-// app.use(cors({ origin: "http://localhost:3000" }));
+
 app.use(cors({
-  origin: "https://logistics-ankits-projects-8e1d9412.vercel.app",
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
 app.use(express.json());
 
 // Save confirmed ride

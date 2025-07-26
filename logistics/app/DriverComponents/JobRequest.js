@@ -31,14 +31,14 @@ const JobRequests = () => {
   console.log("Driver Location:", driverLocation);
 
   // Fetch the latest active job for this driver
-  useEffect(() => {
-    if (!session?.user?.email) return;
-    fetch(`/api/driver/active-ride?email=${encodeURIComponent(session.user.email)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && !data.completed) setActiveJob(data);
-      });
-  }, [session]);
+  // useEffect(() => {
+  //   if (!session?.user?.email) return;
+  //   fetch(`/api/driver/active-ride?email=${encodeURIComponent(session.user.email)}`)
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       if (data && !data.completed) setActiveJob(data);
+  //     });
+  // }, [session]);
 
   useEffect(() => {
     if (!session?.user?.email || !driverLocation) return;
@@ -50,6 +50,21 @@ const JobRequests = () => {
     socketRef.current.on('new_ride_request', (data) => {
       setRequests((prev) => [...prev, data]);
     });
+
+    fetch(`/api/fetch-location?driver_email=${encodeURIComponent(session.user.email)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.location) {
+          console.log("Driver location fetched:", data.location);
+          setDriverLocation(data.location);
+          // Emit a separate event to update location
+          socketRef.current.emit('update_driver_location', { 
+              lat: data.location.latitude,
+              lon: data.location.longitude
+          });
+        }
+      });
+
 
     socketRef.current.on('user_counter_response', (data) => {
       setRequests((prev) => prev.map(req =>
@@ -73,7 +88,7 @@ const JobRequests = () => {
     });
 
     return () => socketRef.current.disconnect();
-  }, [session, driverLocation]);
+  }, [session]);
 
   const handleAccept = (request) => {
     console.log("Button clicked");
