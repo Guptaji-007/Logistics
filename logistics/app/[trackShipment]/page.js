@@ -68,9 +68,9 @@ const Page = () => {
   // Listen for live driver location updates
   useEffect(() => {
     if (!trackingId) return;
-    // socketRef.current = io("http://localhost:4000");
+    socketRef.current = io("http://localhost:4000");
     // socketRef.current = io("https://logistics-hs8g.vercel.app");
-    socketRef.current = io("https://logistics-zh4o.onrender.com");
+    // socketRef.current = io("https://logistics-zh4o.onrender.com");
     socketRef.current.emit("register1", { type: "user", id: session?.user?.email, rideId: trackingId });
     // Listen for driver_location event for this ride
     socketRef.current.on("driver_location", (data) => {
