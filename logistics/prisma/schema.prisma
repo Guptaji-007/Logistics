@@ -1,69 +1,83 @@
 generator client {
-  provider = "prisma-client-js"
+  	provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+	provider  = "postgresql"
+	url       = env("DATABASE_URL")
+	directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  role          String
-  createdAt     DateTime  @default(now())
-  emailVerified DateTime?
-  resetExpires  DateTime?
-  resetToken    String?   @unique
+	id            String    @id @default(cuid())
+	email         String    @unique
+	password      String
+	role          String
+	createdAt     DateTime  @default(now())
+	emailVerified DateTime?
+	resetExpires  DateTime?
+	resetToken    String?   @unique
 }
 
 model Driver {
-  id               String            @id @default(cuid())
-  fullName         String
-  phone            String
-  email            String            @unique
-  vehicleType      String
-  vehicleNumber    String
-  licenseNumber    String
-  experienceYears  Int
-  address          String
-  createdAt        DateTime          @default(now())
-  isActive         Boolean           @default(false)
-  driver_locations driver_locations?
+	id               String            @id @default(cuid())
+	fullName         String
+	phone            String
+	email            String            @unique
+	vehicleType      String
+	vehicleNumber    String
+	licenseNumber    String
+	experienceYears  Int
+	address          String
+	createdAt        DateTime          @default(now())
+	isActive         Boolean           @default(false)
+	driver_locations driver_locations?
 }
 
 model Ride {
-  id           String    @id @default(cuid())
-  userId       String
-  driverId     String
-  pickup       String
-  dropoff      String
-  status       String
-  offerPrice   Float?
-  counterPrice Float?
-  createdAt    DateTime  @default(now())
-  confirmedAt  DateTime?
-  completed    Boolean   @default(false)
-  dropoffLat   Float?
-  dropoffLon   Float?
-  pickupLat    Float?
-  pickupLon    Float?
+	id           String    @id @default(cuid())
+	userId       String
+	driverId     String
+	pickup       String
+	dropoff      String
+	status       String
+	offerPrice   Float?
+	counterPrice Float?
+	createdAt    DateTime  @default(now())
+	confirmedAt  DateTime?
+	completed    Boolean   @default(false)
+	dropoffLat   Float?
+	dropoffLon   Float?
+	pickupLat    Float?
+	pickupLon    Float?
 }
 
 model driver_locations {
-  driver_email String                   @id
-  location     Unsupported("geography")
-  updated_at   DateTime?                @default(now()) @db.Timestamp(6)
-  Driver       Driver                   @relation(fields: [driver_email], references: [email], onDelete: Cascade, onUpdate: NoAction)
+	driver_email String                   @id
+	location     Unsupported("geography")
+	updated_at   DateTime?                @default(now()) @db.Timestamp(6)
+	Driver       Driver                   @relation(fields: [driver_email], references: [email], onDelete: Cascade, onUpdate: NoAction)
 }
+
+
+model manager_driver {
+	manager_id String
+	driver_id  String
+	assigned_at DateTime @default(now())
+
+	// Relations
+	manager User   @relation(fields: [manager_id], references: [id])
+	driver  Driver @relation(fields: [driver_id], references: [id])
+
+	@@id([manager_id, driver_id]) // composite primary key
+}
+
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model spatial_ref_sys {
-  srid      Int     @id
-  auth_name String? @db.VarChar(256)
-  auth_srid Int?
-  srtext    String? @db.VarChar(2048)
-  proj4text String? @db.VarChar(2048)
+	srid      Int     @id
+	auth_name String? @db.VarChar(256)
+	auth_srid Int?
+	srtext    String? @db.VarChar(2048)
+	proj4text String? @db.VarChar(2048)
 }
