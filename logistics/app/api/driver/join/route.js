@@ -12,6 +12,7 @@ export async function POST(req) {
       licenseNumber,
       experienceYears,
       address,
+      managerId,
     } = data;
 
     if (
@@ -22,7 +23,8 @@ export async function POST(req) {
       !vehicleNumber ||
       !licenseNumber ||
       !experienceYears ||
-      !address
+      !address ||
+      !managerId
     ) {
       return new Response(JSON.stringify({ error: "All fields are required." }), { status: 400 });
     }
@@ -37,12 +39,20 @@ export async function POST(req) {
         licenseNumber,
         experienceYears: Number(experienceYears),
         address,
-        isActive: false, 
+        isActive: false,
+      },
+    });
+
+    await prisma.manager_driver.create({
+      data: {
+        manager_id: managerId,
+        driver_id: driver.id,
       },
     });
 
     return new Response(JSON.stringify({ message: "Application submitted!", driver }), { status: 201 });
   } catch (error) {
+    console.error("Error creating driver:", error);
     return new Response(JSON.stringify({ error: "Failed to submit application." }), { status: 500 });
   }
 }
