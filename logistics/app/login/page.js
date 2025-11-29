@@ -43,22 +43,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // The fix is to remove `redirect: false` and the manual `getSession()` call.
-      // This allows NextAuth to handle the session creation and redirection reliably,
-      // which prevents the race condition that happens in production environments.
       const res = await signIn("credentials", {
         email,
         password,
-        // We set a default callbackUrl. Your middleware will correctly protect
-        // the /admin route and only allow users with the 'admin' role to access it.
+        redirect: false,
         callbackUrl: "/",
       });
 
-      // If signIn returns with an error, it means the user was redirected back here.
-      // We can display a generic error message.
-      if (res && res.error) {
+      if (res?.error) {
         setError("Invalid credentials. Please try again.");
         setLoading(false);
+      } else if (res?.ok) {
+        router.push("/");
       }
     } catch (error) {
       console.error("Login error:", error);
