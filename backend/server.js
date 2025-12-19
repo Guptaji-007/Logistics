@@ -56,24 +56,37 @@ app.post("/api/rides/confirm", async (req, res) => {
       },
     });
 
-    // Find socket IDs
+    // Find socket IDs using new structure
     const io = getIO();
-    const userSocketId = Object.keys(users).find((sid) => users[sid] === userId);
-    const driverSocketId = Object.keys(drivers).find((sid) => drivers[sid].id === driverId);
+    const userSocketId = users[userId];
+    const driverData = drivers[driverId];
+    const driverSocketId = driverData ? driverData.socketId : null;
 
-    // Emit to all drivers, and the specific user and driver
-    Object.keys(drivers).forEach((sid) => {
-      io.to(sid).emit("ride_confirmed", ride);
+    // Emit to all drivers (optional logic based on your previous code)
+    // Note: drivers is now an object of objects, so we iterate values
+    Object.values(drivers).forEach((drv) => {
+      io.to(drv.socketId).emit("ride_confirmed", ride);
     });
-    if (userSocketId) io.to(userSocketId).emit("ride_confirmed", ride);
-    res.status(201).json(ride);
 
-    if(ride && userSocketId && driverSocketId){
-      activeRides[ride.id] = { userSocketId, driverSocketId, driverId: driverId , userId: userId };
+    // Emit specifically to the involved parties
+    if (userSocketId) io.to(userSocketId).emit("ride_confirmed", ride);
+    
+    // Add to activeRides
+    if(ride){
+      // We store the IDs. Socket IDs can be looked up dynamically via users/drivers maps if needed later,
+      // but for historical reasons if activeRides needs specific socket IDs at this moment:
+      activeRides[ride.id] = { 
+        userSocketId, 
+        driverSocketId, 
+        driverId: driverId, 
+        userId: userId 
+      };
       console.log(`Active ride added: ${ride.id} with user ${userId} and driver ${driverId}`);
-      console.log(activeRides);
     }
+
+    res.status(201).json(ride);
   } catch (err) {
+    console.error("Error confirming ride:", err);
     res.status(500).json({ error: err.message });
   }
 });

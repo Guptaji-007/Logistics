@@ -13,59 +13,58 @@ const JobRequests = () => {
   const [todayEarnings, setTodayEarnings] = useState(0);
   const socketRef = useRef();
   const { data: session } = useSession();
-  const [acceptDisabled,setAcceptDisabled] = useState(false);
+  const [acceptDisabled, setAcceptDisabled] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
 
-  console.log("Session data:", session);
-
-  // fetch the drivers location
+  // 1. Fetch Location (DB or Live Fallback)
   useEffect(() => {
     if (!session?.user?.email) return;
-    fetch(`/api/fetch-location?driver_email=${encodeURIComponent(session.user.email)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.location) setDriverLocation(data.location);
-      });
-  }, [session]);
-
-  console.log("Driver Location:", driverLocation);
-
-  // Fetch the latest active job for this driver
-  // useEffect(() => {
-  //   if (!session?.user?.email) return;
-  //   fetch(`/api/driver/active-ride?email=${encodeURIComponent(session.user.email)}`)
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       if (data && !data.completed) setActiveJob(data);
-  //     });
-  // }, [session]);
-
-  useEffect(() => {
-    if (!session?.user?.email || !driverLocation) return;
-    socketRef.current = io('http://localhost:4000');
-    // socketRef.current = io('https://logistics-hs8g.vercel.app');  
-    // socketRef.current = io('https://logistics-zh4o.onrender.com');
-    socketRef.current.emit('register', { type: 'driver', id: session?.user?.email , lat: driverLocation.latitude,
-    lon: driverLocation.longitude});
-
-    socketRef.current.on('new_ride_request', (data) => {
-      setRequests((prev) => [...prev, data]);
-    });
 
     fetch(`/api/fetch-location?driver_email=${encodeURIComponent(session.user.email)}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.location) {
-          console.log("Driver location fetched:", data.location);
+          console.log("Driver location fetched from DB:", data.location);
           setDriverLocation(data.location);
-          // Emit a separate event to update location
-          socketRef.current.emit('update_driver_location', { 
-              lat: data.location.latitude,
-              lon: data.location.longitude
-          });
+        } else {
+           // Fallback: If no location in DB, try to get it from browser
+           console.log("No location in DB, trying browser geolocation...");
+           if (navigator.geolocation) {
+             navigator.geolocation.getCurrentPosition(
+               (pos) => {
+                 setDriverLocation({
+                   latitude: pos.coords.latitude,
+                   longitude: pos.coords.longitude
+                 });
+               },
+               (err) => console.error("Error getting live location fallback:", err)
+             );
+           }
         }
-      });
+      })
+      .catch(err => console.error("Error fetching location API:", err));
+  }, [session]);
 
+  // 2. Connect Socket (Depends on session AND driverLocation)
+  useEffect(() => {
+    // We need both email and location to register as a driver
+    if (!session?.user?.email || !driverLocation) return;
+
+    // socketRef.current = io('https://logistics-hs8g.vercel.app');
+    socketRef.current = io('http://localhost:4000');
+
+    // Register with the backend
+    socketRef.current.emit('register', { 
+      type: 'driver', 
+      id: session.user.email, 
+      lat: driverLocation.latitude,
+      lon: driverLocation.longitude
+    });
+
+    socketRef.current.on('new_ride_request', (data) => {
+      console.log("New ride request received:", data);
+      setRequests((prev) => [...prev, data]);
+    });
 
     socketRef.current.on('user_counter_response', (data) => {
       setRequests((prev) => prev.map(req =>
@@ -76,23 +75,20 @@ const JobRequests = () => {
     });
 
     socketRef.current.on('ride_confirmed', (ride) => {
-      // Remove the confirmed ride from all drivers' requests
       setRequests((prev) => prev.filter(req =>
         !(req.pickup === ride.pickup && req.dropoff === ride.dropoff && req.userId === ride.userId)
       ));
-      // Only set as active job for the driver who got the ride
       if (ride.driverId === session?.user?.email) {
         setActiveJob(ride);
-      } else {
-        setActiveJob(null);
       }
     });
 
-    return () => socketRef.current.disconnect();
-  }, [session]);
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, [session, driverLocation]); // <--- KEY FIX: Added driverLocation dependency
 
   const handleAccept = (request) => {
-    console.log("Button clicked");
     console.log('Accepting request:', request);
     setAcceptDisabled(true);
     setTimeout(() => {
@@ -106,7 +102,6 @@ const JobRequests = () => {
   };
 
   const handleCounter = (request) => {
-    console.log('Countering request:', request);
     const counterPrice = prompt('Enter your counter offer price:');
     if (counterPrice) {
       socketRef.current.emit('driver_counter_response', {
@@ -131,43 +126,45 @@ const JobRequests = () => {
         <div className="bg-white p-4 rounded-2xl shadow">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">New Job Requests</h3>
-            <button className="text-blue-600 text-sm font-medium">View All</button>
+            {/* Debug Info (Optional - remove in production) */}
+            <span className={`text-xs ${driverLocation ? 'text-green-500' : 'text-red-500'}`}>
+               {driverLocation ? 'Online' : 'Getting Location...'}
+            </span>
           </div>
+          {requests.length === 0 && <p className="text-gray-500 text-center py-4">Waiting for rides...</p>}
           {requests.map((req, idx) => (
-            <>
-            <div key={idx} className="flex justify-between items-center py-2 border-t first:border-t-0">
-              <div>
-                <p className="font-medium">{req.pickup}</p>
-                <p className="text-sm text-gray-500">{req.dropoff}</p>
-                <p className="text-sm text-gray-500">
-                  {req.counterPrice
-                    ? `User Counter Offer: ${req.counterPrice}`
-                    : `Offer Price: ${req.offerPrice}`}
-                </p>
-
+            <div key={idx} className="border-t first:border-t-0 pt-4 mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <div>
+                  <p className="font-medium">{req.pickup}</p>
+                  <p className="text-sm text-gray-500">To: {req.dropoff}</p>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {req.counterPrice
+                      ? `Counter: ₹${req.counterPrice}`
+                      : `Offer: ₹${req.offerPrice}`}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <button onClick={() => handleCounter(req)} className="bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm">
+                        Counter
+                    </button>
+                    <button
+                        onClick={() => handleAccept(req)}
+                        className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={acceptDisabled}
+                    >
+                        Accept
+                    </button>
+                </div>
               </div>
-              <button onClick={() => handleCounter(req)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg">
-                Counter Offer
-              </button>
-               <button
-                  onClick={() => handleAccept(req)}
-                  className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={acceptDisabled}
-                >
-                  Accept
-                </button>
-            </div>
-            <div>
-              <div className="h-48 w-min-3xl mt-2 rounded">
+              <div className="h-48 w-full rounded overflow-hidden relative z-0">
                 <MapView
                   pickup={{ lat: req.pickupLat, lon: req.pickupLon, label: req.pickup }}
                   destination={{ lat: req.dropoffLat, lon: req.dropoffLon, label: req.dropoff }}
                 />
               </div>
             </div>
-            </>
           ))}
-
         </div>
       )}
     </div>

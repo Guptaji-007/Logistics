@@ -17,76 +17,49 @@ const ActiveJob = ({ job, onFinish }) => {
   useEffect(() => {
     socketRef.current = io("http://localhost:4000");
     // socketRef.current = io("https://logistics-hs8g.vercel.app");
-    // socketRef.current = io("https://logistics-zh4o.onrender.com");
     return () => {
       socketRef.current.disconnect();
     };
   }, []);
 
-  // const setTrip = () => {
-  //   setstartTrip(!startTrip);
-  //   if (typeof window !== "undefined" && navigator.geolocation)  {
-  //     alert("Geolocation not supported");
-  //     return;
-  //   }
+  const setTrip = () => {
+    setstartTrip(!startTrip);
 
-  //   watchIdRef.current = navigator.geolocation.watchPosition(
-  //     (position) => {
-  //       const { latitude, longitude } = position.coords;
-  //       setDriverLocation({ lat: latitude, lon: longitude });
-  //       socketRef.current.emit("register1", { type: "driver", id: session.user.email, lat: latitude, lon: longitude, rideId: job.id });
-  //       socketRef.current.emit("driver_location_update", {
-  //         rideId: job.id,
-  //         lat: latitude,
-  //         lon: longitude,
-  //       });
-  //       console.log("Sent location:", latitude, longitude);
-  //     },
-  //     (error) => {
-  //       console.error("Error watching location", error);
-  //     },
-  //     {
-  //       enableHighAccuracy: true,
-  //       timeout: 10000,
-  //       maximumAge: 0,
-  //     }
-  //   );
-  // };
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setDriverLocation({ lat: latitude, lon: longitude });
+          
+          // UPDATED: Changed 'register1' to 'register' to match backend
+          socketRef.current.emit("register", { 
+            type: "driver", 
+            id: session.user.email, 
+            lat: latitude, 
+            lon: longitude, 
+            rideId: job.id 
+          });
 
-const setTrip = () => {
-  setstartTrip(!startTrip);
-
-  // CORRECT LOGIC:
-  // Check if we are in the browser AND geolocation is supported.
-  if (typeof window !== 'undefined' && navigator.geolocation) {
-    // If yes, run the geolocation code inside this block.
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setDriverLocation({ lat: latitude, lon: longitude });
-        socketRef.current.emit("register1", { type: "driver", id: session.user.email, lat: latitude, lon: longitude, rideId: job.id });
-        socketRef.current.emit("driver_location_update", {
-          rideId: job.id,
-          lat: latitude,
-          lon: longitude,
-        });
-        console.log("Sent location:", latitude, longitude);
-      },
-      (error) => {
-        console.error("Error watching location", error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
-  } else {
-    // If no, alert the user and do nothing else.
-    alert("Geolocation is not supported by this browser.");
-  }
-};
-
+          socketRef.current.emit("driver_location_update", {
+            rideId: job.id,
+            lat: latitude,
+            lon: longitude,
+          });
+          console.log("Sent location:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error watching location", error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by this browser.");
+    }
+  };
 
   const stopLiveLocation = () => {
     if (watchIdRef.current !== null) {
@@ -97,7 +70,6 @@ const setTrip = () => {
   };
 
   const finishTrip = () => {
-    // Call the API to finish the trip
     fetch(`/api/driver/active-ride?rideId=${job.id}`, {
       method: 'PATCH',
       headers: {
@@ -108,7 +80,7 @@ const setTrip = () => {
       .then((res) => res.json())
       .then((data) => {
         console.log('Trip finished:', data);
-        if (onFinish) onFinish(data); // Notify parent
+        if (onFinish) onFinish(data);
       })
       .catch((error) => {
         console.error('Error finishing trip:', error);
@@ -118,8 +90,6 @@ const setTrip = () => {
   useEffect(() => {
     return () => stopLiveLocation();
   }, []);
-
-
 
   if (!job) return null;
   return (
@@ -134,7 +104,7 @@ const setTrip = () => {
           <p><strong>Customer:</strong> {job.userName || job.userId}</p>
           <p className="text-sm text-gray-500">{job.userPhone || ""}</p>
         </div>
-        <p className="text-lg font-semibold">${job.counterPrice || job.offerPrice}</p>
+        <p className="text-lg font-semibold">Price: {job.counterPrice || job.offerPrice}</p>
         <div className="flex gap-4 mt-2">
           {!startTrip ?
             <button className="bg-blue-600 text-white px-4 py-2 rounded-lg" onClick={() => { setTrip(); setShowMap(true); }}>Start Trip</button> :
