@@ -6,23 +6,123 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          String
+  createdAt     DateTime  @default(now())
+  emailVerified DateTime?
+  resetExpires  DateTime?
+  resetToken    String?   @unique
+
+  // Back relation: A manager can have many driver assignments
+  managerDrivers manager_driver[] @relation("ManagerToDriver")
+}
+
+model Driver {
+  id               String            @id @default(cuid())
+  fullName         String
+  phone            String
+  email            String            @unique
+  vehicleType      String
+  vehicleNumber    String
+  licenseNumber    String
+  experienceYears  Int
+  address          String
+  createdAt        DateTime          @default(now())
+  isActive         Boolean           @default(false)
+  driver_locations driver_locations?
+
+  // Back relation: A driver can belong to many managers
+  managerDrivers manager_driver[] @relation("DriverToManager")
+}
 
 model Ride {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   driverId     String
   pickup       String
-  pickupLat    Float?
-  pickupLon    Float?
   dropoff      String
-  dropoffLat   Float?
-  dropoffLon   Float?
   status       String
   offerPrice   Float?
   counterPrice Float?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
   confirmedAt  DateTime?
-  completed    Boolean   @default(false) 
+  completed    Boolean   @default(false)
+  dropoffLat   Float?
+  dropoffLon   Float?
+  pickupLat    Float?
+  pickupLon    Float?
+}
+
+model driver_locations {
+  driver_email String                   @id
+  location     Unsupported("geography")
+  updated_at   DateTime?                @default(now()) @db.Timestamp(6)
+  Driver       Driver                   @relation(fields: [driver_email], references: [email], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model manager_driver {
+  manager_id  String
+  driver_id   String
+  assigned_at DateTime @default(now())
+
+  // Relation to User (manager)
+  manager User @relation("ManagerToDriver", fields: [manager_id], references: [id])
+
+  // Relation to Driver
+  driver  Driver @relation("DriverToManager", fields: [driver_id], references: [id])
+
+  @@id([manager_id, driver_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations.
+/// Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+
+// Add to your schema.prisma
+
+model RideRequest {
+  id           String         @id @default(cuid())
+  userId       String         // The user asking for a ride
+  userName     String?
+  userPhone    String?
+  pickup       String
+  pickupLat    Float
+  pickupLon    Float
+  dropoff      String
+  dropoffLat   Float
+  dropoffLon   Float
+  serviceType  String?
+  details      String?
+  offerPrice   Float          // User's initial offer
+  status       String         @default("SEARCHING") // SEARCHING, NEGOTIATING, CONFIRMED, CANCELLED, EXPIRED
+  createdAt    DateTime       @default(now())
+  expiresAt    DateTime       // Auto-expiry (e.g., 10 mins)
+  
+  responses    RideResponse[]
+}
+
+model RideResponse {
+  id           String      @id @default(cuid())
+  requestId    String
+  driverId     String
+  driverName   String?
+  driverPhone  String?
+  status       String      @default("offered") // offered (accepted user price), countered, accepted_by_user, rejected
+  price        Float       // The price for this specific response (either user's offer or driver's counter)
+  createdAt    DateTime    @default(now())
+  
+  request      RideRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }

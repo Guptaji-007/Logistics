@@ -16,6 +16,37 @@ const JobRequests = () => {
   const [acceptDisabled, setAcceptDisabled] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
 
+
+  useEffect(() => {
+    if (!driverLocation) return;
+
+    fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}`)
+      .then(res => res.json())
+      .then(data => {
+        // Transform DB data to format expected by UI
+        const formattedRequests = data.map(req => ({
+          requestId: req.id, // Important: Keep ID for referencing
+          userId: req.userId,
+          pickup: req.pickup,
+          dropoff: req.dropoff,
+          pickupLat: req.pickupLat,
+          pickupLon: req.pickupLon,
+          dropoffLat: req.dropoffLat,
+          dropoffLon: req.dropoffLon,
+          offerPrice: req.offerPrice
+        }));
+
+        // Avoid duplicates if socket also sends them
+        setRequests(prev => {
+          const newReqs = formattedRequests.filter(
+            nr => !prev.some(pr => pr.requestId === nr.requestId)
+          );
+          return [...prev, ...newReqs];
+        });
+      });
+  }, [driverLocation]);
+
+
   // 1. Fetch Location (DB or Live Fallback)
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -27,19 +58,19 @@ const JobRequests = () => {
           console.log("Driver location fetched from DB:", data.location);
           setDriverLocation(data.location);
         } else {
-           // Fallback: If no location in DB, try to get it from browser
-           console.log("No location in DB, trying browser geolocation...");
-           if (navigator.geolocation) {
-             navigator.geolocation.getCurrentPosition(
-               (pos) => {
-                 setDriverLocation({
-                   latitude: pos.coords.latitude,
-                   longitude: pos.coords.longitude
-                 });
-               },
-               (err) => console.error("Error getting live location fallback:", err)
-             );
-           }
+          // Fallback: If no location in DB, try to get it from browser
+          console.log("No location in DB, trying browser geolocation...");
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setDriverLocation({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude
+                });
+              },
+              (err) => console.error("Error getting live location fallback:", err)
+            );
+          }
         }
       })
       .catch(err => console.error("Error fetching location API:", err));
@@ -54,9 +85,9 @@ const JobRequests = () => {
     socketRef.current = io('http://localhost:4000');
 
     // Register with the backend
-    socketRef.current.emit('register', { 
-      type: 'driver', 
-      id: session.user.email, 
+    socketRef.current.emit('register', {
+      type: 'driver',
+      id: session.user.email,
       lat: driverLocation.latitude,
       lon: driverLocation.longitude
     });
@@ -88,16 +119,25 @@ const JobRequests = () => {
     };
   }, [session, driverLocation]); // <--- KEY FIX: Added driverLocation dependency
 
+  // const handleAccept = (request) => {
+  //   console.log('Accepting request:', request);
+  //   setAcceptDisabled(true);
+  //   setTimeout(() => {
+  //     setAcceptDisabled(false);
+  //   }, 10000);
+  //   socketRef.current.emit('driver_response', {
+  //     ...request,
+  //     driverId: session?.user?.email,
+  //     status: 'accepted',
+  //   });
+  // };
   const handleAccept = (request) => {
-    console.log('Accepting request:', request);
-    setAcceptDisabled(true);
-    setTimeout(() => {
-      setAcceptDisabled(false);
-    }, 10000);
     socketRef.current.emit('driver_response', {
-      ...request,
+      requestId: request.requestId, // Send DB ID
+      userId: request.userId,
       driverId: session?.user?.email,
       status: 'accepted',
+      offerPrice: request.offerPrice
     });
   };
 
@@ -128,7 +168,7 @@ const JobRequests = () => {
             <h3 className="text-lg font-semibold">New Job Requests</h3>
             {/* Debug Info (Optional - remove in production) */}
             <span className={`text-xs ${driverLocation ? 'text-green-500' : 'text-red-500'}`}>
-               {driverLocation ? 'Online' : 'Getting Location...'}
+              {driverLocation ? 'Online' : 'Getting Location...'}
             </span>
           </div>
           {requests.length === 0 && <p className="text-gray-500 text-center py-4">Waiting for rides...</p>}
@@ -145,16 +185,16 @@ const JobRequests = () => {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <button onClick={() => handleCounter(req)} className="bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm">
-                        Counter
-                    </button>
-                    <button
-                        onClick={() => handleAccept(req)}
-                        className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        disabled={acceptDisabled}
-                    >
-                        Accept
-                    </button>
+                  <button onClick={() => handleCounter(req)} className="bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm">
+                    Counter
+                  </button>
+                  <button
+                    onClick={() => handleAccept(req)}
+                    className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={acceptDisabled}
+                  >
+                    Accept
+                  </button>
                 </div>
               </div>
               <div className="h-48 w-full rounded overflow-hidden relative z-0">

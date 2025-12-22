@@ -89,3 +89,40 @@ model spatial_ref_sys {
   srtext    String? @db.VarChar(2048)
   proj4text String? @db.VarChar(2048)
 }
+
+
+// Add to your schema.prisma
+
+model RideRequest {
+  id           String         @id @default(cuid())
+  userId       String         // The user asking for a ride
+  userName     String?
+  userPhone    String?
+  pickup       String
+  pickupLat    Float
+  pickupLon    Float
+  dropoff      String
+  dropoffLat   Float
+  dropoffLon   Float
+  serviceType  String?
+  details      String?
+  offerPrice   Float          // User's initial offer
+  status       String         @default("SEARCHING") // SEARCHING, NEGOTIATING, CONFIRMED, CANCELLED, EXPIRED
+  createdAt    DateTime       @default(now())
+  expiresAt    DateTime       // Auto-expiry (e.g., 10 mins)
+  
+  responses    RideResponse[]
+}
+
+model RideResponse {
+  id           String      @id @default(cuid())
+  requestId    String
+  driverId     String
+  driverName   String?
+  driverPhone  String?
+  status       String      @default("offered") // offered (accepted user price), countered, accepted_by_user, rejected
+  price        Float       // The price for this specific response (either user's offer or driver's counter)
+  createdAt    DateTime    @default(now())
+  
+  request      RideRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}

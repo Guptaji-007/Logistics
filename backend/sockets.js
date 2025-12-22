@@ -1,7 +1,8 @@
+const prisma = require("./prismaClient");
+
 let io;
-const drivers = {}; // Maps driverId -> { socketId, lat, lon }
-const users = {};   // Maps userId -> socketId
-const activeRides = require("./activeRides");
+const drivers = {}; 
+const users = {};   
 
 const allowedOrigins = [
   "http://localhost:3000",
@@ -20,131 +21,155 @@ function setupSocket(server) {
 
   const haversine = (lat1, lon1, lat2, lon2) => {
     function toRad(x) { return x * Math.PI / 180; }
-    const R = 6371; // km
+    const R = 6371; 
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
   io.on("connection", (socket) => {
-      console.log(`New client connected: ${socket.id}`);
+    console.log(`New client connected: ${socket.id}`);
 
-      // Unified register event handling both initial connection and page refreshes
-      socket.on("register", ({ type, id, lat, lon, rideId }) => {
-          if (!id) return;
-
-          if (type === "driver") {
-            // Store by driverId so we can find it easily later
-            drivers[id] = { socketId: socket.id, lat, lon };
-            socket.driverId = id; // Tag socket for disconnect cleanup
-
-            if (rideId) {
-              const room = `ride-${rideId}`;
-              socket.join(room);
-              console.log(`Driver ${id} rejoined room ${room}`);
-            }
-          }
-          
-          if (type === "user") {
-            // Store by userId
-            users[id] = socket.id;
-            socket.userId = id; // Tag socket for disconnect cleanup
-
-            if (rideId) {
-              const room = `ride-${rideId}`;
-              socket.join(room);
-              console.log(`User ${id} rejoined room ${room}`);
-            }
-          }
-
-          console.log(`Registered ${type}: ${id} on socket ${socket.id}`);
-          console.log("Current users (ID -> Socket):", users);
-          console.log("Current drivers (ID -> Data):", drivers);
+    // Register
+    socket.on("register", ({ type, id, lat, lon, rideId }) => {
+      if (!id) return;
+      if (type === "driver") {
+        drivers[id] = { socketId: socket.id, lat, lon };
+        socket.driverId = id; 
+        if (rideId) socket.join(`ride-${rideId}`);
+      }
+      if (type === "user") {
+        users[id] = socket.id;
+        socket.userId = id; 
+        if (rideId) socket.join(`ride-${rideId}`);
+      }
     });
-  
+
+    // Driver Location Update
     socket.on("update_driver_location", (data) => {
       const driverId = socket.driverId;
       if (driverId && drivers[driverId]) {
-          drivers[driverId].lat = data.lat;
-          drivers[driverId].lon = data.lon;
-          console.log(`Updated location for driver ${driverId}:`, data);
-          
-          // If the driver is in a ride room, emit location to that room immediately
-          // (Optional: depends on if client sends rideId in this event or if we track it)
-          // if (activeRides...) 
+        drivers[driverId].lat = data.lat;
+        drivers[driverId].lon = data.lon;
       }
     });
 
-    socket.on("ride_request", (data) => {
-        console.log("Ride request received:", data);
-        const { pickupLat, pickupLon } = data;
-        
-        // Iterate over values since drivers is now keyed by driverId
-        Object.values(drivers).forEach((driver) => {
-          if (
-            driver.lat !== undefined &&
-            driver.lon !== undefined &&
-            haversine(pickupLat, pickupLon, driver.lat, driver.lon) <= 10
-          ) {
-            io.to(driver.socketId).emit("new_ride_request", data);
+    // === CRITICAL FIX: Create DB Entry BEFORE Emitting ===
+    socket.on("ride_request", async (data) => {
+      console.log("Ride request received:", data);
+      
+      try {
+        // 1. Create the persistent request in the DB
+        const savedRequest = await prisma.rideRequest.create({
+          data: {
+            userId: data.userId,
+            userName: data.name, 
+            userPhone: data.phone, 
+            pickup: data.pickup,
+            pickupLat: parseFloat(data.pickupLat),
+            pickupLon: parseFloat(data.pickupLon),
+            dropoff: data.dropoff,
+            dropoffLat: parseFloat(data.dropoffLat),
+            dropoffLon: parseFloat(data.dropoffLon),
+            offerPrice: parseFloat(data.offerPrice),
+            serviceType: data.serviceType,
+            details: data.details,
+            status: "SEARCHING",
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000) 
           }
         });
-    });
 
-    socket.on("driver_response", (data) => {
-      console.log("Driver response received:", data);
-      // Direct lookup using userId
-      const userSocketId = users[data.userId];
-      
-      if (userSocketId) {
-        io.to(userSocketId).emit("driver_response", data);
-      } else {
-        console.log("User not connected:", data.userId);
+        console.log("Request created with ID:", savedRequest.id);
+
+        // 2. Attach the new DB ID to the payload sent to drivers
+        const payload = {
+          ...data,
+          requestId: savedRequest.id, // <--- This ensures the Driver gets the ID
+          id: savedRequest.id
+        };
+
+        // 3. Emit to nearby drivers
+        const { pickupLat, pickupLon } = data;
+        Object.values(drivers).forEach((driver) => {
+          if (
+            driver.lat !== undefined && driver.lon !== undefined &&
+            haversine(pickupLat, pickupLon, driver.lat, driver.lon) <= 10
+          ) {
+            io.to(driver.socketId).emit("new_ride_request", payload);
+          }
+        });
+
+      } catch (err) {
+        console.error("Error creating ride request in DB:", err);
       }
     });
 
-    socket.on("driver_counter_response", (data) => {
-      console.log("Driver counter response received:", data);
-      const userSocketId = users[data.userId];
+    // Unified Response Handler (Accept/Counter)
+    const handleDriverResponse = async (data, isCounter) => {
+      console.log(`Driver ${isCounter ? 'Counter' : 'Response'} received:`, data);
       
-      if (userSocketId) {
-        io.to(userSocketId).emit("driver_counter_response", data);
-      } else {
-        console.log("User not connected for counter response:", data.userId);
+      if (!data.requestId) {
+        console.error("Error: requestId is missing. Make sure ride_request creates the DB entry first.");
+        return;
       }
-    });
+
+      try {
+        const dbStatus = isCounter ? 'countered' : (data.status === 'accepted' ? 'offered' : data.status);
+        const price = parseFloat(isCounter ? data.counterPrice : (data.offerPrice || data.counterPrice));
+
+        const response = await prisma.rideResponse.create({
+          data: {
+            requestId: data.requestId, 
+            driverId: data.driverId,
+            status: dbStatus,
+            price: price,
+            driverName: data.driverName, 
+            driverPhone: data.driverPhone 
+          }
+        });
+
+        await prisma.rideRequest.update({
+          where: { id: data.requestId },
+          data: { status: "NEGOTIATING" }
+        });
+
+        const userSocketId = users[data.userId];
+        const eventName = isCounter ? "driver_counter_response" : "driver_response";
+        
+        if (userSocketId) {
+          io.to(userSocketId).emit(eventName, {
+            ...data,
+            responseId: response.id,
+            status: dbStatus 
+          });
+        }
+      } catch (e) {
+        console.error("Error saving driver response:", e);
+      }
+    };
+
+    socket.on("driver_response", (data) => handleDriverResponse(data, false));
+    socket.on("driver_counter_response", (data) => handleDriverResponse(data, true));
 
     socket.on("user_counter_response", (data) => {
       const driverData = drivers[data.driverId];
-      
       if (driverData && driverData.socketId) {
         io.to(driverData.socketId).emit("user_counter_response", data);
-      } else {
-        console.log("Driver not connected for user counter response:", data.driverId);
       }
     });
 
     socket.on("driver_location_update", ({ rideId, lat, lon }) => {
       if (!rideId) return;
-      const room = `ride-${rideId}`;
-      // Emitting to the room ensures the user gets it if they are joined
-      io.to(room).emit("driver_location", { lat, lon, rideId });
+      io.to(`ride-${rideId}`).emit("driver_location", { lat, lon, rideId });
     });
 
     socket.on("disconnect", () => {
-      // Cleanup using tags
-      if (socket.userId) {
-        delete users[socket.userId];
-        console.log(`User ${socket.userId} disconnected`);
-      }
-      if (socket.driverId) {
-        delete drivers[socket.driverId];
-        console.log(`Driver ${socket.driverId} disconnected`);
-      }
+      if (socket.userId) delete users[socket.userId];
+      if (socket.driverId) delete drivers[socket.driverId];
     });
   });
 }
