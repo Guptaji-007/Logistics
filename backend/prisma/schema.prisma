@@ -23,6 +23,37 @@ model User {
   managerDrivers manager_driver[] @relation("ManagerToDriver")
 }
 
+// ... (Previous content remains same until Ride model)
+
+model Ride {
+  id           String    @id @default(cuid())
+  userId       String
+  driverId     String    // The Manager who negotiated the deal
+  pickup       String
+  dropoff      String
+  status       String
+  offerPrice   Float?
+  counterPrice Float?
+  createdAt    DateTime  @default(now())
+  confirmedAt  DateTime?
+  completed    Boolean   @default(false)
+  dropoffLat   Float?
+  dropoffLon   Float?
+  pickupLat    Float?
+  pickupLon    Float?
+
+  // --- Manager-Driver Assignment Fields ---
+  managerId              String?   // Explicit link to the Manager (User)
+  assignedDriverId       String?   // The actual driver executing the ride
+  assignmentStatus       String    @default("pending_assignment") // pending_assignment, assigned, in_progress, completed
+  driverVerificationCode String?   // The unique 6-digit code
+  isDriverVerified       Boolean   @default(false)
+  
+  // Relations
+  assignedDriver         Driver?   @relation("AssignedDriver", fields: [assignedDriverId], references: [id])
+}
+
+// Update Driver model to include the relation
 model Driver {
   id               String            @id @default(cuid())
   fullName         String
@@ -36,29 +67,12 @@ model Driver {
   createdAt        DateTime          @default(now())
   isActive         Boolean           @default(false)
   driver_locations driver_locations?
-
-  // Back relation: A driver can belong to many managers
-  managerDrivers manager_driver[] @relation("DriverToManager")
+  
+  managerDrivers   manager_driver[]  @relation("DriverToManager")
+  assignedRides    Ride[]            @relation("AssignedDriver") // New relation
 }
 
-model Ride {
-  id           String    @id @default(cuid())
-  userId       String
-  driverId     String
-  pickup       String
-  dropoff      String
-  status       String
-  offerPrice   Float?
-  counterPrice Float?
-  createdAt    DateTime  @default(now())
-  confirmedAt  DateTime?
-  completed    Boolean   @default(false)
-  dropoffLat   Float?
-  dropoffLon   Float?
-  pickupLat    Float?
-  pickupLon    Float?
-}
-
+// ... (Rest of the schema remains same)
 model driver_locations {
   driver_email String                   @id
   location     Unsupported("geography")

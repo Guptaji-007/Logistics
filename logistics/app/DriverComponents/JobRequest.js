@@ -2,14 +2,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
-import ActiveJob from './ActiveJob';
 import MapView from '../components/MapView';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 
-const JobRequests = () => {
+const JobRequests = ({ onRideConfirmed }) => {
   const [requests, setRequests] = useState([]);
-  const [activeJob, setActiveJob] = useState(null);
   const socketRef = useRef();
   const { data: session } = useSession();
   const [acceptDisabled, setAcceptDisabled] = useState(false);
@@ -39,7 +37,7 @@ const JobRequests = () => {
       .catch(err => console.error("Error fetching location API:", err));
   }, [session]);
 
-  // 2. Fetch Nearby Requests (UPDATED: Restores Counters)
+  // 2. Fetch Nearby Requests (Restores Counters)
   useEffect(() => {
     if (!driverLocation || !session?.user?.email) return;
 
@@ -120,22 +118,24 @@ const JobRequests = () => {
       ));
     });
 
-    // Remove confirmed rides immediately
+    // Remove confirmed rides immediately and notify parent
     socketRef.current.on('ride_confirmed', (ride) => {
       setRequests((prev) => prev.filter(req =>
         req.requestId !== ride.requestId && req.id !== ride.requestId
       ));
       
-      // If I am the driver, show Active Job
+      // Notify parent component to add to "Active Fleet" list
       if (ride.driverId === session?.user?.email) {
-        setActiveJob(ride);
+        if (onRideConfirmed) {
+            onRideConfirmed(ride);
+        }
       }
     });
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
-  }, [session, driverLocation]);
+  }, [session, driverLocation, onRideConfirmed]);
 
   const handleAccept = (request) => {
     setAcceptDisabled(true);
@@ -175,66 +175,56 @@ const JobRequests = () => {
     }
   };
 
-  const handleFinish = () => {
-    setActiveJob(null);
-    // Optionally refresh requests here
-    window.location.reload(); 
-  };
-
   return (
-    <div>
-      {activeJob ? (
-        <ActiveJob job={activeJob} onFinish={handleFinish} />
-      ) : (
-        <div className="bg-white p-4 rounded-2xl shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">New Job Requests</h3>
-            <span className={`text-xs ${driverLocation ? 'text-green-500' : 'text-red-500'}`}>
-              {driverLocation ? 'Online' : 'Getting Location...'}
-            </span>
-          </div>
-          {requests.length === 0 && <p className="text-gray-500 text-center py-4">Waiting for rides...</p>}
-          {requests.map((req, idx) => (
-            <div key={req.requestId || idx} className="border-t first:border-t-0 pt-4 mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <div>
-                  <p className="font-medium">{req.pickup}</p>
-                  <p className="text-sm text-gray-500">To: {req.dropoff}</p>
-                  
-                  <div className="mt-1">
-                    <span className="text-sm text-gray-600">User Offer: ₹{req.offerPrice}</span>
-                    {req.counterPrice && (
-                         <span className="block text-sm font-semibold text-blue-600">
-                             {req.status === 'user_countered' ? 'User Counter: ' : 'Your Counter: '} 
-                             ₹{req.counterPrice}
-                         </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex flex-col gap-2">
-                  <button onClick={() => handleCounter(req)} className="bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm">
-                    Counter
-                  </button>
-                  <button
-                    onClick={() => handleAccept(req)}
-                    className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={acceptDisabled}
-                  >
-                    Accept
-                  </button>
-                </div>
-              </div>
-              <div className="h-48 w-full rounded overflow-hidden relative z-0">
-                <MapView
-                  pickup={{ lat: req.pickupLat, lon: req.pickupLon, label: req.pickup }}
-                  destination={{ lat: req.dropoffLat, lon: req.dropoffLon, label: req.dropoff }}
-                />
+    <div className="bg-white p-4 rounded-2xl shadow">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">New Job Requests</h3>
+        <span className={`text-xs ${driverLocation ? 'text-green-500' : 'text-red-500'}`}>
+          {driverLocation ? 'Online' : 'Getting Location...'}
+        </span>
+      </div>
+      
+      {requests.length === 0 && <p className="text-gray-500 text-center py-4">Waiting for rides...</p>}
+      
+      {requests.map((req, idx) => (
+        <div key={req.requestId || idx} className="border-t first:border-t-0 pt-4 mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <p className="font-medium">{req.pickup}</p>
+              <p className="text-sm text-gray-500">To: {req.dropoff}</p>
+              
+              <div className="mt-1">
+                <span className="text-sm text-gray-600">User Offer: ₹{req.offerPrice}</span>
+                {req.counterPrice && (
+                      <span className="block text-sm font-semibold text-blue-600">
+                          {req.status === 'user_countered' ? 'User Counter: ' : 'Your Counter: '} 
+                          ₹{req.counterPrice}
+                      </span>
+                )}
               </div>
             </div>
-          ))}
+            
+            <div className="flex flex-col gap-2">
+              <button onClick={() => handleCounter(req)} className="bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm">
+                Counter
+              </button>
+              <button
+                onClick={() => handleAccept(req)}
+                className={`bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm ${acceptDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={acceptDisabled}
+              >
+                Accept
+              </button>
+            </div>
+          </div>
+          <div className="h-48 w-full rounded overflow-hidden relative z-0">
+            <MapView
+              pickup={{ lat: req.pickupLat, lon: req.pickupLon, label: req.pickup }}
+              destination={{ lat: req.dropoffLat, lon: req.dropoffLon, label: req.dropoff }}
+            />
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };

@@ -2,7 +2,8 @@ const prisma = require("./prismaClient");
 
 let io;
 const drivers = {}; 
-const users = {};   
+const users = {};  
+ 
 
 const allowedOrigins = [
   "http://localhost:3000",
@@ -165,6 +166,73 @@ function setupSocket(server) {
     socket.on("driver_location_update", ({ rideId, lat, lon }) => {
       if (!rideId) return;
       io.to(`ride-${rideId}`).emit("driver_location", { lat, lon, rideId });
+    });
+
+
+    // === NEW: Assigned Driver Logic ===
+    
+    // 1. Driver joins using the unique code
+    socket.on("join_assigned_ride", async ({ code }) => {
+      try {
+        console.log(`Attempting to join with code: ${code}`);
+        // Verify code in DB
+        const ride = await prisma.ride.findFirst({
+          where: { 
+            driverVerificationCode: code,
+            assignmentStatus: { in: ["assigned", "in_progress"] },
+            completed: false
+          }
+        });
+
+        if (!ride) {
+          socket.emit("error", { message: "Invalid or expired code" });
+          return;
+        }
+
+        // Mark as verified if not already (first login)
+        if (!ride.isDriverVerified) {
+          await prisma.ride.update({
+            where: { id: ride.id },
+            data: { 
+              isDriverVerified: true, 
+              assignmentStatus: "in_progress" 
+            }
+          });
+        }
+
+        // Store socket info
+        socket.assignedRideId = ride.id;
+        socket.join(`ride-${ride.id}`); // Join the specific ride room
+        
+        // Notify User and Manager that driver has connected
+        io.to(`ride-${ride.id}`).emit("driver_connected", { 
+          rideId: ride.id,
+          message: "Driver has connected and is ready."
+        });
+        
+        // Send ride details back to driver
+        socket.emit("ride_details", ride);
+
+      } catch (error) {
+        console.error("Error joining assigned ride:", error);
+        socket.emit("error", { message: "Server error during verification" });
+      }
+    });
+
+    // 2. Assigned Driver Location Update
+    socket.on("assigned_driver_location", ({ lat, lon }) => {
+      const rideId = socket.assignedRideId;
+      if (!rideId) return;
+
+      // Broadcast to everyone in the ride room (User and Manager)
+      io.to(`ride-${rideId}`).emit("driver_location", { 
+        lat, 
+        lon, 
+        rideId 
+      });
+      
+      // Optional: Update DB for persistence
+      // prisma.ride.update({ where: { id: rideId }, data: { dropoffLat: lat, dropoffLon: lon } }).catch(() => {});
     });
 
     socket.on("disconnect", () => {
