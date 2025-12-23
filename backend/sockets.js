@@ -230,6 +230,16 @@ function setupSocket(server) {
         lon, 
         rideId 
       });
+
+    // === NEW: Ride Status Updates (Start/Complete) ===
+    socket.on("ride_status_update", ({ rideId, status }) => {
+      console.log(`Ride ${rideId} status update: ${status}`);
+      // Broadcast to User and Manager tracking this ride
+      io.to(`ride-${rideId}`).emit("ride_status_update", { 
+        rideId, 
+        status 
+      });
+    });
       
       // Optional: Update DB for persistence
       // prisma.ride.update({ where: { id: rideId }, data: { dropoffLat: lat, dropoffLon: lon } }).catch(() => {});
