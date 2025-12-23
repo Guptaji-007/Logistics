@@ -15,38 +15,6 @@ const JobRequests = () => {
   const [acceptDisabled, setAcceptDisabled] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
 
-
-  useEffect(() => {
-    if (!driverLocation) return;
-
-    fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}`)
-      .then(res => res.json())
-      .then(data => {
-        const formattedRequests = data.map(req => ({
-          requestId: req.id,
-          userId: req.userId,
-          pickup: req.pickup,
-          dropoff: req.dropoff,
-          pickupLat: req.pickupLat,
-          pickupLon: req.pickupLon,
-          dropoffLat: req.dropoffLat,
-          dropoffLon: req.dropoffLon,
-          offerPrice: req.offerPrice,
-          // Check if there are responses from this driver
-          // This requires the API to return 'responses' or logic to filter them
-          // For now, we assume the API returns raw requests
-        }));
-
-        setRequests(prev => {
-          const newReqs = formattedRequests.filter(
-            nr => !prev.some(pr => pr.requestId === nr.requestId)
-          );
-          return [...prev, ...newReqs];
-        });
-      });
-  }, [driverLocation]);
-
-
   // 1. Fetch Location
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -71,7 +39,36 @@ const JobRequests = () => {
       .catch(err => console.error("Error fetching location API:", err));
   }, [session]);
 
-  // 2. Connect Socket
+  // 2. Fetch Nearby Requests on Load
+  useEffect(() => {
+    if (!driverLocation) return;
+
+    fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}`)
+      .then(res => res.json())
+      .then(data => {
+        const formattedRequests = data.map(req => ({
+          requestId: req.id,
+          userId: req.userId,
+          pickup: req.pickup,
+          dropoff: req.dropoff,
+          pickupLat: req.pickupLat,
+          pickupLon: req.pickupLon,
+          dropoffLat: req.dropoffLat,
+          dropoffLon: req.dropoffLon,
+          offerPrice: req.offerPrice,
+          // If you have responses/status logic, handle it here
+        }));
+
+        setRequests(prev => {
+          const newReqs = formattedRequests.filter(
+            nr => !prev.some(pr => pr.requestId === nr.requestId)
+          );
+          return [...prev, ...newReqs];
+        });
+      });
+  }, [driverLocation]);
+
+  // 3. Connect Socket
   useEffect(() => {
     if (!session?.user?.email || !driverLocation) return;
 
@@ -89,10 +86,9 @@ const JobRequests = () => {
       setRequests((prev) => [...prev, data]);
     });
 
-    // FIX: Update request when User Counters Back
+    // Update request when User Counters Back
     socketRef.current.on('user_counter_response', (data) => {
       setRequests((prev) => prev.map(req =>
-        // Use requestId for secure matching if available, else fallback
         (req.requestId && req.requestId === data.requestId) || 
         (!req.requestId && req.userId === data.userId && req.pickup === data.pickup)
           ? { ...req, ...data, counterPrice: data.counterPrice, status: 'user_countered' }
@@ -116,12 +112,13 @@ const JobRequests = () => {
 
   const handleAccept = (request) => {
     setAcceptDisabled(true);
-    // Optimistic remove or disable
     
+    // SEND DRIVER INFO HERE
     socketRef.current.emit('driver_response', {
       requestId: request.requestId,
       userId: request.userId,
       driverId: session?.user?.email,
+      driverName: session?.user?.name, // <--- Added Name
       status: 'accepted',
       offerPrice: request.offerPrice
     });
@@ -134,16 +131,17 @@ const JobRequests = () => {
     if (counterPrice) {
       const price = parseFloat(counterPrice);
       
-      // 1. Emit to server
+      // SEND DRIVER INFO HERE
       socketRef.current.emit('driver_counter_response', {
         ...request,
         driverId: session?.user?.email,
+        driverName: session?.user?.name, // <--- Added Name
         status: 'countered',
         offerPrice: request.offerPrice,
         counterPrice: price,
       });
 
-      // 2. FIX: Immediately update local state so driver sees their own counter
+      // Update local state
       setRequests(prev => prev.map(r => 
         r.requestId === request.requestId 
           ? { ...r, counterPrice: price, status: 'countered' }
@@ -176,7 +174,6 @@ const JobRequests = () => {
                   <p className="font-medium">{req.pickup}</p>
                   <p className="text-sm text-gray-500">To: {req.dropoff}</p>
                   
-                  {/* FIX: Improved Price Display */}
                   <div className="mt-1">
                     <span className="text-sm text-gray-600">User Offer: ₹{req.offerPrice}</span>
                     {req.counterPrice && (
