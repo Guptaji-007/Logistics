@@ -1,79 +1,79 @@
-"use client"
-import React, { useState, useEffect, useRef } from 'react'
+'use client';
+import { useEffect, useState, useRef, use } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { io } from 'socket.io-client';
 import dynamic from 'next/dynamic';
-import Navbar from '../components/Navbar'
-import { useSearchParams } from 'next/navigation'
-import { io } from "socket.io-client";
+import Navbar from '../components/Navbar';
 import { useSession } from 'next-auth/react';
+import { Package, Truck, Phone, AlertCircle } from 'lucide-react';
 
-const MapView = dynamic(() => import("../components/MapView"), { ssr: false });
+const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
-
-const Page = () => {
+export default function TrackShipment({ params }) {
+  // 1. Unwrap params (Next.js 15 Requirement)
+  const resolvedParams = use(params);
   const searchParams = useSearchParams();
-  const trackingId = searchParams.get("id") || "";
-  const [orderdata, setorderdata] = useState([]);
-  const [driverLocation, setDriverLocation] = useState(null);
-  const socketRef = useRef(null);
-  const [pickup, setPickup] = useState(null);
-  const [destination, setDestination] = useState(null);
-
-
   const { data: session } = useSession();
 
-  useEffect(() => {
-    if (!session) return;
+  // 2. Robust ID Extraction
+  // Priority: Query Param (?id=...) -> Path Param (/[id])
+  // We ignore the path param if it equals the folder name "trackShipment"
+  let trackingId = searchParams.get('id');
+  if (!trackingId && resolvedParams?.trackShipment && resolvedParams.trackShipment !== 'trackShipment') {
+      trackingId = resolvedParams.trackShipment;
+  }
 
-    const fetchPickupAndDestination = async () => {
-      const response = await fetch(`/api/rides/trackShipment?trackingId=${trackingId}`);
-      const data = await response.json();
-      if (data.ride) {
-        setPickup({
-          lat: data.ride.pickupLat,
-          lon: data.ride.pickupLon,
-          label: data.ride.pickup
-        });
-        setDestination({
-          lat: data.ride.dropoffLat,
-          lon: data.ride.dropoffLon,
-          label: data.ride.dropoff
-        });
+  const [ride, setRide] = useState(null);
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [status, setStatus] = useState('Loading...');
+  const socketRef = useRef();
+
+  // 3. Fetch Ride Details
+  useEffect(() => {
+    if (!trackingId) {
+        setStatus("No Tracking ID provided");
+        return;
+    }
+
+    const fetchRide = async () => {
+      try {
+        // FIXED: Use 'trackingId' to match the API route expectation
+        const res = await fetch(`/api/rides/trackShipment?trackingId=${trackingId}`); 
+        const data = await res.json();
+        
+        if (data.ride) {
+          setRide(data.ride);
+          setStatus(data.ride.status || 'In Transit');
+        } else {
+            setStatus('Ride not found');
+        }
+      } catch (error) {
+        console.error("Error fetching ride:", error);
+        setStatus('Error loading data');
       }
     };
 
-    fetchPickupAndDestination();
-
-  }, [session, trackingId]);
-
-  console.log("Pickup Location:", pickup);
-  console.log("Destination Location:", destination);
-
-  console.log("Session Data:", session);
-  useEffect(() => {
-    const fetchOrderData = async () => {
-      const response = await fetch(`/api/trackShipment?trackingId=${trackingId}`);
-      const data = await response.json();
-      setorderdata(data);
-    };
-
-    if (trackingId) {
-      fetchOrderData();
-    }
-
-    return () => {
-      setorderdata([]);
-    };
+    fetchRide();
   }, [trackingId]);
 
-  // Listen for live driver location updates
+  // 4. Live Tracking Socket
   useEffect(() => {
     if (!trackingId) return;
-    socketRef.current = io("http://localhost:4000");
+
     // socketRef.current = io("https://logistics-hs8g.vercel.app");
-    // socketRef.current = io("https://logistics-zh4o.onrender.com");
-    socketRef.current.emit("register1", { type: "user", id: session?.user?.email, rideId: trackingId });
-    // Listen for driver_location event for this ride
-    socketRef.current.on("driver_location", (data) => {
+    socketRef.current = io("http://localhost:4000");
+
+    socketRef.current.on('connect', () => {
+      console.log("Connected to tracking socket");
+      // FIXED: Changed 'register1' to 'register' to match backend/sockets.js
+      socketRef.current.emit('register', { 
+        type: 'user', 
+        id: session?.user?.email || 'GUEST_TRACKER', 
+        rideId: trackingId 
+      });
+    });
+
+    socketRef.current.on('driver_location', (data) => {
       if (data.rideId === trackingId) {
         setDriverLocation({ lat: data.lat, lon: data.lon });
       }
@@ -82,87 +82,95 @@ const Page = () => {
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
-    // }, [trackingId, session, driverLocation]);  // remove driverLocation from dependencies to avoid infinite loop
   }, [trackingId, session]);
+
+  if (!ride) return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-400">{status}</p>
+        </div>
+      </>
+  );
 
   return (
     <>
       <Navbar />
+      <div className="w-full h-0.5 bg-gray-700"></div>
 
-      <div className="w-full h-0.5 bg-gray-400 opacity-15"></div>
-
-      <div className="flex flex-col lg:flex-row min-h-screen text-white font-sans">
-        {/* LEFT PANEL - SHIPMENT DETAILS */}
-        <div className="w-full lg:w-[38%] p-6  border-r border-gray-700 shadow-xl">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-white mb-6">Order ID:<br></br> <span className="text-lime-400 font-mono text-2xl">{trackingId}</span></h1>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="px-2 py-1 bg-blue-600 rounded-full text-white font-medium">In Progress</span>
+      <div className="flex flex-col lg:flex-row min-h-screen bg-gray-900 text-gray-100 font-sans">
+        {/* LEFT PANEL - DETAILS */}
+        <div className="w-full lg:w-[38%] p-6 border-r border-gray-800 shadow-2xl z-10 bg-gray-900">
+          <div className="mb-8">
+            <h1 className="text-sm text-gray-400 uppercase tracking-wider mb-1">Tracking Number</h1>
+            <span className="text-lime-400 font-mono text-2xl font-bold tracking-wide">{trackingId}</span>
+            <div className="mt-4 flex items-center gap-2">
+               <span className="px-3 py-1 bg-blue-600/20 text-blue-400 border border-blue-600/50 rounded-full text-xs font-bold uppercase tracking-wide">
+                 {status}
+               </span>
             </div>
           </div>
 
-          {/* FROM LOCATION */}
-          {pickup && (
-            <div className="mb-6 mt-6">
-              <p className="text-white uppercase text-s mb-1 mr-2">From:</p>
-              <div className="bg-gray-800 rounded-md p-3 border border-gray-700">
-                <h2 className="text-base font-semibold">{pickup.label}</h2>
-                <p className="text-xs text-gray-400 mt-1">Lat: {pickup.lat}, Lon: {pickup.lon}</p>
-              </div>
-            </div>
-          )}
+          <div className="space-y-6 relative">
+             {/* Connector Line */}
+             <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-700"></div>
 
-          {/* TO LOCATION */}
-          {destination && (
-            <div className="mb-4">
-              <p className="text-white uppercase text-s mb-1 mr-2">To:</p>
-              <div className="bg-gray-800 rounded-md p-3 border border-gray-700">
-                <h2 className="text-base font-semibold">{destination.label}</h2>
-                <p className="text-xs text-gray-400 mt-1">Lat: {destination.lat}, Lon: {destination.lon}</p>
-              </div>
-            </div>
-          )}
+             {/* FROM */}
+             <div className="relative pl-10">
+                <div className="absolute left-2.5 top-1.5 w-3 h-3 bg-blue-500 rounded-full ring-4 ring-gray-900"></div>
+                <p className="text-gray-500 text-xs uppercase font-bold mb-1">Pickup</p>
+                <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <h2 className="text-sm font-semibold text-white">{ride.pickup}</h2>
+                </div>
+             </div>
 
-          {/* DRIVER LOCATION */}
-          {driverLocation && (
-            <div className="mb-4">
-              <p className="text-gray-400 uppercase text-xs mb-1">Driver Live Location</p>
-              <div className="bg-green-900/30 rounded-md p-3 border border-green-700 text-green-300">
-                Lat: {driverLocation.lat}, Lon: {driverLocation.lon}
-              </div>
-            </div>
-          )}
-
-          {/* TIMING DETAILS */}
-          <div className="mt-6 text-sm text-gray-300 space-y-1">
-            <p><strong>📦 Status:</strong> In Transit</p>
-            <p><strong>🚚 Carrier:</strong> Logistique Express</p>
-            <p><strong>🕒 Last Updated:</strong> Just Now</p>
+             {/* TO */}
+             <div className="relative pl-10">
+                <div className="absolute left-2.5 top-1.5 w-3 h-3 bg-red-500 rounded-full ring-4 ring-gray-900"></div>
+                <p className="text-gray-500 text-xs uppercase font-bold mb-1">Dropoff</p>
+                <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <h2 className="text-sm font-semibold text-white">{ride.dropoff}</h2>
+                </div>
+             </div>
           </div>
 
-          {/* ALERT BOX */}
-          <div className="mt-6 p-3 bg-red-900/30 border border-red-700 rounded text-sm text-red-300">
-            ⚠️ High volume: Package may be delayed due to peak season.
-          </div>
+          {/* Driver Status */}
+          {driverLocation ? (
+             <div className="mt-8 p-4 bg-green-900/20 border border-green-800 rounded-xl flex items-center gap-3 animate-pulse">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-green-400 text-sm font-medium">Driver is sharing live location</span>
+             </div>
+          ) : (
+             <div className="mt-8 p-4 bg-gray-800/50 border border-gray-700 rounded-xl flex items-center gap-3">
+                <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                <span className="text-gray-400 text-sm">Connecting to driver...</span>
+             </div>
+          )}
+          
+          {/* Driver Info Block (Optional) */}
+          {ride.assignedDriver && (
+              <div className="mt-6 flex items-center gap-4 p-4 bg-gray-800 rounded-xl border border-gray-700">
+                  <div className="bg-gray-700 p-3 rounded-full">
+                      <Truck className="text-white w-6 h-6" />
+                  </div>
+                  <div>
+                      <p className="text-sm font-bold text-white">{ride.assignedDriver.fullName || "Driver Assigned"}</p>
+                      <p className="text-xs text-gray-400">{ride.assignedDriver.vehicleNumber}</p>
+                  </div>
+              </div>
+          )}
         </div>
 
         {/* RIGHT PANEL - MAP */}
-        <div className="w-full lg:w-[62%] h-[calc(100vh-64px)]">
-          {pickup && destination && (
-            <div className="w-full h-full">
-              <MapView
-                key={`${pickup?.lat}-${pickup?.lon}-${destination?.lat}-${destination?.lon}`}
-                pickup={{ lat: pickup.lat, lon: pickup.lon, label: pickup.label }}
-                destination={{ lat: destination.lat, lon: destination.lon, label: destination.label }}
+        <div className="w-full lg:w-[62%] h-[50vh] lg:h-[calc(100vh-65px)] relative">
+            <MapView
+                pickup={{ lat: ride.pickupLat, lon: ride.pickupLon }}
+                destination={{ lat: ride.dropoffLat, lon: ride.dropoffLon }}
                 driverLocation={driverLocation}
-              />
-
-            </div>
-          )}
+            />
         </div>
       </div>
     </>
-  )
+  );
 }
-
-export default Page
