@@ -4,7 +4,7 @@ const cors = require("cors");
 const { setupSocket, drivers, users, getIO } = require("./sockets");
 const prisma = require("./prismaClient");
 
-const activeRides = require("./activeRides"); // Import active rides management
+const activeRides = require("./activeRides"); 
 
 const allowedOrigins = [
   "http://localhost:3000",
@@ -29,8 +29,18 @@ app.use(cors({
 
 app.use(express.json());
 
-
-// Add these routes to backend/server.js
+// Helper: Haversine Formula for distance
+const haversine = (lat1, lon1, lat2, lon2) => {
+  function toRad(x) { return x * Math.PI / 180; }
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 // 1. Create a persistent Ride Request
 app.post("/api/ride-request", async (req, res) => {
@@ -52,7 +62,7 @@ app.post("/api/ride-request", async (req, res) => {
     });
 
     if (existing) {
-      return res.json(existing); // Return existing active request
+      return res.json(existing); 
     }
 
     const newRequest = await prisma.rideRequest.create({
@@ -62,17 +72,33 @@ app.post("/api/ride-request", async (req, res) => {
         dropoff, dropoffLat, dropoffLon,
         offerPrice: parseFloat(offerPrice),
         serviceType, details,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes expiry
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000) 
       }
     });
 
-    // Notify nearby drivers via Socket (using the exported IO)
+    // Notify nearby drivers via Socket
     const io = getIO();
+    
+    // PREPARE PAYLOAD WITH REQUEST ID
+    const payload = {
+      ...newRequest,
+      requestId: newRequest.id // <--- CRITICAL FIX: Frontend expects this field
+    };
+
     Object.values(drivers).forEach((driver) => {
-       // Re-implement your haversine logic here to filter nearby drivers
        if (driver.lat && driver.lon) {
-          // Send the simplified payload needed for the UI
-          io.to(driver.socketId).emit("new_ride_request", newRequest);
+          // Check distance (10km radius)
+          const dist = haversine(
+             parseFloat(pickupLat), 
+             parseFloat(pickupLon), 
+             parseFloat(driver.lat), 
+             parseFloat(driver.lon)
+          );
+
+          if (dist <= 10) {
+            io.to(driver.socketId).emit("new_ride_request", payload);
+            console.log(`Emitted request ${newRequest.id} to driver ${driver.socketId} (${dist.toFixed(2)}km away)`);
+          }
        }
     });
 
@@ -92,7 +118,7 @@ app.get("/api/ride-request/active/:userId", async (req, res) => {
         status: { in: ["SEARCHING", "NEGOTIATING"] },
         expiresAt: { gt: new Date() }
       },
-      include: { responses: true } // Include driver bids
+      include: { responses: true } 
     });
     res.json(activeRequest || null);
   } catch (err) {
@@ -103,48 +129,81 @@ app.get("/api/ride-request/active/:userId", async (req, res) => {
 // 3. Get Nearby Requests (For Driver Reconnection)
 app.get("/api/ride-request/nearby", async (req, res) => {
   const { lat, lon } = req.query;
-  // In a real app, use PostGIS. Here we fetch active and filter in JS for simplicity or use raw SQL.
-  // For simplicity, returning all active requests:
-  const activeRequests = await prisma.rideRequest.findMany({
-    where: {
-      status: { in: ["SEARCHING", "NEGOTIATING"] },
-      expiresAt: { gt: new Date() }
-    }
-  });
   
-  // Filter logic (optional, dependent on your haversine function availability)
-  // const nearby = activeRequests.filter(...) 
-  
-  res.json(activeRequests);
+  if (!lat || !lon) {
+    return res.json([]);
+  }
+
+  try {
+    // Fetch all active requests
+    const activeRequests = await prisma.rideRequest.findMany({
+      where: {
+        status: { in: ["SEARCHING", "NEGOTIATING"] },
+        expiresAt: { gt: new Date() }
+      }
+    });
+    
+    // Filter by distance in JS (Simple approach)
+    const nearby = activeRequests.filter(req => {
+      const dist = haversine(
+        parseFloat(req.pickupLat), 
+        parseFloat(req.pickupLon), 
+        parseFloat(lat), 
+        parseFloat(lon)
+      );
+      return dist <= 10;
+    });
+    
+    res.json(nearby);
+  } catch(e) {
+    console.error("Error fetching nearby:", e);
+    res.status(500).json([]);
+  }
 });
 
-
 // Save confirmed ride
-// ... existing imports
-
 app.post("/api/rides/confirm", async (req, res) => {
   try {
     const {
-      requestId, // <--- Extract the Request ID
-      userId, driverId, pickup, pickupLat, pickupLon,
-      dropoff, dropoffLat, dropoffLon,
-      offerPrice, counterPrice
+      requestId, 
+      userId, driverId, 
+      offerPrice, counterPrice,
+      // We accept these from body, but we will fallback to DB if missing
+      pickup, pickupLat, pickupLon,
+      dropoff, dropoffLat, dropoffLon
     } = req.body;
 
-    const parsedOfferPrice = offerPrice !== undefined ? parseFloat(offerPrice) : null;
+    // 1. Fetch the original request to ensure we have valid location data
+    let requestDetails = {};
+    if (requestId) {
+      const dbRequest = await prisma.rideRequest.findUnique({
+        where: { id: requestId }
+      });
+      if (dbRequest) {
+        requestDetails = dbRequest;
+      }
+    }
+
+    // Validation: Ensure we have data from somewhere
+    const finalPickup = pickup || requestDetails.pickup;
+    if (!finalPickup) {
+      return res.status(400).json({ error: "Missing ride details (pickup location)" });
+    }
+
+    const parsedOfferPrice = offerPrice !== undefined ? parseFloat(offerPrice) : (requestDetails.offerPrice || null);
     const parsedCounterPrice = counterPrice !== undefined ? parseFloat(counterPrice) : null;
 
-    // 1. Create the Final Ride
+    // 2. Create the Final Ride using DB data as fallback
     const ride = await prisma.ride.create({
       data: {
         userId,
         driverId,
-        pickup,
-        pickupLat,
-        pickupLon,
-        dropoff,
-        dropoffLat,
-        dropoffLon,
+        pickup: finalPickup,
+        pickupLat: pickupLat || requestDetails.pickupLat,
+        pickupLon: pickupLon || requestDetails.pickupLon,
+        dropoff: dropoff || requestDetails.dropoff,
+        dropoffLat: dropoffLat || requestDetails.dropoffLat,
+        dropoffLon: dropoffLon || requestDetails.dropoffLon,
         status: "confirmed",
         offerPrice: parsedOfferPrice,
         counterPrice: parsedCounterPrice,
@@ -152,8 +211,7 @@ app.post("/api/rides/confirm", async (req, res) => {
       },
     });
 
-    // 2. Mark the Bid/Request as CONFIRMED (FIX)
-    // This stops it from showing up as an "active" request in the future
+    // 3. Mark the Bid/Request as CONFIRMED
     if (requestId) {
       await prisma.rideRequest.update({
         where: { id: requestId },
@@ -161,7 +219,6 @@ app.post("/api/rides/confirm", async (req, res) => {
       }).catch(err => console.log("Error updating request status:", err));
     }
 
-    // ... existing socket notification logic ...
     const io = getIO();
     const userSocketId = users[userId];
     const driverData = drivers[driverId];
@@ -172,7 +229,6 @@ app.post("/api/rides/confirm", async (req, res) => {
 
     if (userSocketId) io.to(userSocketId).emit("ride_confirmed", ride);
 
-    // Add to activeRides
     if(ride){
       activeRides[ride.id] = { 
         userSocketId, 
@@ -188,6 +244,8 @@ app.post("/api/rides/confirm", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ... rest of server.js
 
 const server = http.createServer(app);
 setupSocket(server);

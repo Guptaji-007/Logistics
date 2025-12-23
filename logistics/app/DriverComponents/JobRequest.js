@@ -10,7 +10,6 @@ import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 const JobRequests = () => {
   const [requests, setRequests] = useState([]);
   const [activeJob, setActiveJob] = useState(null);
-  const [todayEarnings, setTodayEarnings] = useState(0);
   const socketRef = useRef();
   const { data: session } = useSession();
   const [acceptDisabled, setAcceptDisabled] = useState(false);
@@ -23,9 +22,8 @@ const JobRequests = () => {
     fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}`)
       .then(res => res.json())
       .then(data => {
-        // Transform DB data to format expected by UI
         const formattedRequests = data.map(req => ({
-          requestId: req.id, // Important: Keep ID for referencing
+          requestId: req.id,
           userId: req.userId,
           pickup: req.pickup,
           dropoff: req.dropoff,
@@ -33,10 +31,12 @@ const JobRequests = () => {
           pickupLon: req.pickupLon,
           dropoffLat: req.dropoffLat,
           dropoffLon: req.dropoffLon,
-          offerPrice: req.offerPrice
+          offerPrice: req.offerPrice,
+          // Check if there are responses from this driver
+          // This requires the API to return 'responses' or logic to filter them
+          // For now, we assume the API returns raw requests
         }));
 
-        // Avoid duplicates if socket also sends them
         setRequests(prev => {
           const newReqs = formattedRequests.filter(
             nr => !prev.some(pr => pr.requestId === nr.requestId)
@@ -47,7 +47,7 @@ const JobRequests = () => {
   }, [driverLocation]);
 
 
-  // 1. Fetch Location (DB or Live Fallback)
+  // 1. Fetch Location
   useEffect(() => {
     if (!session?.user?.email) return;
 
@@ -55,36 +55,28 @@ const JobRequests = () => {
       .then(res => res.json())
       .then(data => {
         if (data && data.location) {
-          console.log("Driver location fetched from DB:", data.location);
           setDriverLocation(data.location);
-        } else {
-          // Fallback: If no location in DB, try to get it from browser
-          console.log("No location in DB, trying browser geolocation...");
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                setDriverLocation({
-                  latitude: pos.coords.latitude,
-                  longitude: pos.coords.longitude
-                });
-              },
-              (err) => console.error("Error getting live location fallback:", err)
-            );
-          }
+        } else if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setDriverLocation({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude
+              });
+            },
+            (err) => console.error("Error getting live location fallback:", err)
+          );
         }
       })
       .catch(err => console.error("Error fetching location API:", err));
   }, [session]);
 
-  // 2. Connect Socket (Depends on session AND driverLocation)
+  // 2. Connect Socket
   useEffect(() => {
-    // We need both email and location to register as a driver
     if (!session?.user?.email || !driverLocation) return;
 
-    // socketRef.current = io('https://logistics-hs8g.vercel.app');
     socketRef.current = io('http://localhost:4000');
 
-    // Register with the backend
     socketRef.current.emit('register', {
       type: 'driver',
       id: session.user.email,
@@ -97,17 +89,20 @@ const JobRequests = () => {
       setRequests((prev) => [...prev, data]);
     });
 
+    // FIX: Update request when User Counters Back
     socketRef.current.on('user_counter_response', (data) => {
       setRequests((prev) => prev.map(req =>
-        req.userId === data.userId && req.pickup === data.pickup && req.dropoff === data.dropoff
-          ? { ...req, ...data }
+        // Use requestId for secure matching if available, else fallback
+        (req.requestId && req.requestId === data.requestId) || 
+        (!req.requestId && req.userId === data.userId && req.pickup === data.pickup)
+          ? { ...req, ...data, counterPrice: data.counterPrice, status: 'user_countered' }
           : req
       ));
     });
 
     socketRef.current.on('ride_confirmed', (ride) => {
       setRequests((prev) => prev.filter(req =>
-        !(req.pickup === ride.pickup && req.dropoff === ride.dropoff && req.userId === ride.userId)
+        req.requestId !== ride.requestId // Remove the confirmed request
       ));
       if (ride.driverId === session?.user?.email) {
         setActiveJob(ride);
@@ -117,40 +112,43 @@ const JobRequests = () => {
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
-  }, [session, driverLocation]); // <--- KEY FIX: Added driverLocation dependency
+  }, [session, driverLocation]);
 
-  // const handleAccept = (request) => {
-  //   console.log('Accepting request:', request);
-  //   setAcceptDisabled(true);
-  //   setTimeout(() => {
-  //     setAcceptDisabled(false);
-  //   }, 10000);
-  //   socketRef.current.emit('driver_response', {
-  //     ...request,
-  //     driverId: session?.user?.email,
-  //     status: 'accepted',
-  //   });
-  // };
   const handleAccept = (request) => {
+    setAcceptDisabled(true);
+    // Optimistic remove or disable
+    
     socketRef.current.emit('driver_response', {
-      requestId: request.requestId, // Send DB ID
+      requestId: request.requestId,
       userId: request.userId,
       driverId: session?.user?.email,
       status: 'accepted',
       offerPrice: request.offerPrice
     });
+    
+    setTimeout(() => setAcceptDisabled(false), 5000);
   };
 
   const handleCounter = (request) => {
     const counterPrice = prompt('Enter your counter offer price:');
     if (counterPrice) {
+      const price = parseFloat(counterPrice);
+      
+      // 1. Emit to server
       socketRef.current.emit('driver_counter_response', {
         ...request,
         driverId: session?.user?.email,
         status: 'countered',
         offerPrice: request.offerPrice,
-        counterPrice: parseFloat(counterPrice),
+        counterPrice: price,
       });
+
+      // 2. FIX: Immediately update local state so driver sees their own counter
+      setRequests(prev => prev.map(r => 
+        r.requestId === request.requestId 
+          ? { ...r, counterPrice: price, status: 'countered' }
+          : r
+      ));
     }
   };
 
@@ -166,24 +164,30 @@ const JobRequests = () => {
         <div className="bg-white p-4 rounded-2xl shadow">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">New Job Requests</h3>
-            {/* Debug Info (Optional - remove in production) */}
             <span className={`text-xs ${driverLocation ? 'text-green-500' : 'text-red-500'}`}>
               {driverLocation ? 'Online' : 'Getting Location...'}
             </span>
           </div>
           {requests.length === 0 && <p className="text-gray-500 text-center py-4">Waiting for rides...</p>}
           {requests.map((req, idx) => (
-            <div key={idx} className="border-t first:border-t-0 pt-4 mt-4">
+            <div key={req.requestId || idx} className="border-t first:border-t-0 pt-4 mt-4">
               <div className="flex justify-between items-center mb-2">
                 <div>
                   <p className="font-medium">{req.pickup}</p>
                   <p className="text-sm text-gray-500">To: {req.dropoff}</p>
-                  <p className="text-sm font-semibold text-blue-600">
-                    {req.counterPrice
-                      ? `Counter: ₹${req.counterPrice}`
-                      : `Offer: ₹${req.offerPrice}`}
-                  </p>
+                  
+                  {/* FIX: Improved Price Display */}
+                  <div className="mt-1">
+                    <span className="text-sm text-gray-600">User Offer: ₹{req.offerPrice}</span>
+                    {req.counterPrice && (
+                         <span className="block text-sm font-semibold text-blue-600">
+                             {req.status === 'user_countered' ? 'User Counter: ' : 'Your Counter: '} 
+                             ₹{req.counterPrice}
+                         </span>
+                    )}
+                  </div>
                 </div>
+                
                 <div className="flex flex-col gap-2">
                   <button onClick={() => handleCounter(req)} className="bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm">
                     Counter
