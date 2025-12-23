@@ -39,34 +39,59 @@ const JobRequests = () => {
       .catch(err => console.error("Error fetching location API:", err));
   }, [session]);
 
-  // 2. Fetch Nearby Requests on Load
+  // 2. Fetch Nearby Requests (UPDATED: Restores Counters)
   useEffect(() => {
-    if (!driverLocation) return;
+    if (!driverLocation || !session?.user?.email) return;
 
-    fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}`)
+    // Pass driverId to get my specific history
+    fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}&driverId=${session.user.email}`)
       .then(res => res.json())
       .then(data => {
-        const formattedRequests = data.map(req => ({
-          requestId: req.id,
-          userId: req.userId,
-          pickup: req.pickup,
-          dropoff: req.dropoff,
-          pickupLat: req.pickupLat,
-          pickupLon: req.pickupLon,
-          dropoffLat: req.dropoffLat,
-          dropoffLon: req.dropoffLon,
-          offerPrice: req.offerPrice,
-          // If you have responses/status logic, handle it here
-        }));
+        const formattedRequests = data.map(req => {
+          // Check if I have a previous response
+          const myResponse = req.responses && req.responses.length > 0 ? req.responses[0] : null;
+
+          return {
+            requestId: req.id,
+            userId: req.userId,
+            pickup: req.pickup,
+            dropoff: req.dropoff,
+            pickupLat: req.pickupLat,
+            pickupLon: req.pickupLon,
+            dropoffLat: req.dropoffLat,
+            dropoffLon: req.dropoffLon,
+            offerPrice: req.offerPrice,
+            
+            // RESTORE STATE from DB
+            counterPrice: myResponse ? myResponse.price : null,
+            status: myResponse ? myResponse.status : undefined, // 'countered' or 'accepted'
+          };
+        });
 
         setRequests(prev => {
+          // Merge new DB data with existing socket data (avoiding duplicates)
           const newReqs = formattedRequests.filter(
             nr => !prev.some(pr => pr.requestId === nr.requestId)
           );
-          return [...prev, ...newReqs];
+          
+          // Also update existing ones if DB has fresher state (e.g. after refresh)
+          const merged = [...prev];
+          formattedRequests.forEach(fr => {
+             const idx = merged.findIndex(m => m.requestId === fr.requestId);
+             if (idx !== -1) {
+                 // If we found it, ensure counterPrice is restored if missing
+                 if (!merged[idx].counterPrice && fr.counterPrice) {
+                     merged[idx] = { ...merged[idx], ...fr };
+                 }
+             } else {
+                 merged.push(fr);
+             }
+          });
+          
+          return merged;
         });
       });
-  }, [driverLocation]);
+  }, [driverLocation, session]);
 
   // 3. Connect Socket
   useEffect(() => {
@@ -86,7 +111,6 @@ const JobRequests = () => {
       setRequests((prev) => [...prev, data]);
     });
 
-    // Update request when User Counters Back
     socketRef.current.on('user_counter_response', (data) => {
       setRequests((prev) => prev.map(req =>
         (req.requestId && req.requestId === data.requestId) || 
@@ -96,10 +120,13 @@ const JobRequests = () => {
       ));
     });
 
+    // Remove confirmed rides immediately
     socketRef.current.on('ride_confirmed', (ride) => {
       setRequests((prev) => prev.filter(req =>
-        req.requestId !== ride.requestId // Remove the confirmed request
+        req.requestId !== ride.requestId && req.id !== ride.requestId
       ));
+      
+      // If I am the driver, show Active Job
       if (ride.driverId === session?.user?.email) {
         setActiveJob(ride);
       }
@@ -113,14 +140,14 @@ const JobRequests = () => {
   const handleAccept = (request) => {
     setAcceptDisabled(true);
     
-    // SEND DRIVER INFO HERE
     socketRef.current.emit('driver_response', {
       requestId: request.requestId,
       userId: request.userId,
       driverId: session?.user?.email,
-      driverName: session?.user?.name, // <--- Added Name
+      driverName: session?.user?.name,
       status: 'accepted',
-      offerPrice: request.offerPrice
+      offerPrice: request.offerPrice,
+      counterPrice: request.counterPrice || null,
     });
     
     setTimeout(() => setAcceptDisabled(false), 5000);
@@ -131,17 +158,15 @@ const JobRequests = () => {
     if (counterPrice) {
       const price = parseFloat(counterPrice);
       
-      // SEND DRIVER INFO HERE
       socketRef.current.emit('driver_counter_response', {
         ...request,
         driverId: session?.user?.email,
-        driverName: session?.user?.name, // <--- Added Name
+        driverName: session?.user?.name,
         status: 'countered',
         offerPrice: request.offerPrice,
         counterPrice: price,
       });
 
-      // Update local state
       setRequests(prev => prev.map(r => 
         r.requestId === request.requestId 
           ? { ...r, counterPrice: price, status: 'countered' }
@@ -152,6 +177,8 @@ const JobRequests = () => {
 
   const handleFinish = () => {
     setActiveJob(null);
+    // Optionally refresh requests here
+    window.location.reload(); 
   };
 
   return (

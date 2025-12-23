@@ -127,23 +127,36 @@ app.get("/api/ride-request/active/:userId", async (req, res) => {
 });
 
 // 3. Get Nearby Requests (For Driver Reconnection)
+// backend/server.js
+
+// ... imports
+
+// 3. Get Nearby Requests (UPDATED for Persistence)
 app.get("/api/ride-request/nearby", async (req, res) => {
-  const { lat, lon } = req.query;
+  const { lat, lon, driverId } = req.query; // <--- Accept driverId
   
   if (!lat || !lon) {
     return res.json([]);
   }
 
   try {
-    // Fetch all active requests
+    // Fetch active requests (SEARCHING or NEGOTIATING only)
+    // This ensures CONFIRMED rides are NOT returned.
     const activeRequests = await prisma.rideRequest.findMany({
       where: {
         status: { in: ["SEARCHING", "NEGOTIATING"] },
         expiresAt: { gt: new Date() }
+      },
+      include: {
+        // Include responses ONLY from this specific driver
+        // This lets the frontend know if this driver already countered
+        responses: {
+          where: { driverId: driverId || "undefined_driver" } 
+        }
       }
     });
     
-    // Filter by distance in JS (Simple approach)
+    // Filter by distance
     const nearby = activeRequests.filter(req => {
       const dist = haversine(
         parseFloat(req.pickupLat), 
@@ -151,7 +164,7 @@ app.get("/api/ride-request/nearby", async (req, res) => {
         parseFloat(lat), 
         parseFloat(lon)
       );
-      return dist <= 10;
+      return dist <= 10; // 10km radius
     });
     
     res.json(nearby);
@@ -161,6 +174,7 @@ app.get("/api/ride-request/nearby", async (req, res) => {
   }
 });
 
+// ... rest of server.js
 // Save confirmed ride
 app.post("/api/rides/confirm", async (req, res) => {
   try {
