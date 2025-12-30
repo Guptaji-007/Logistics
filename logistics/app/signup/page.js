@@ -54,7 +54,7 @@ export default function SignupPage() {
       });
 
       const data = await res.json();
-
+      console.log(res)
       if (res.ok) {
         setSuccess("Signup successful! Redirecting to login...");
         setTimeout(() => router.push("/login"), 1500);
@@ -130,12 +130,12 @@ export default function SignupPage() {
       {/* Left-side Branding Column (Consistent with Login Page) */}
       <div className="hidden lg:flex lg:flex-col lg:w-1/2 items-center justify-center bg-black text-white p-12 text-center">
         <LogisticsLogo className="h-24 w-24 text-green-400" />
-         <h1 className="mt-1 text-4xl font-bold ">
-            <i>Logistique</i>
-          </h1>
-          <p className="mt-4 text-lg font-bold text-gray-300 ">
-            Your partner in reliable and efficient freight forwarding.
-          </p>
+        <h1 className="mt-1 text-4xl font-bold ">
+          <i>Logistique</i>
+        </h1>
+        <p className="mt-4 text-lg font-bold text-gray-300 ">
+          Your partner in reliable and efficient freight forwarding.
+        </p>
       </div>
 
       {/* Right-side Form Column */}
@@ -222,9 +222,9 @@ export default function SignupPage() {
             {/* Links Section */}
             <div className="text-center text-sm mt-2 flex flex-col items-center gap-2">
               <p className="text-gray-600">
-                 <Link href="/login" className="text-green-500 underline text-sm text-center">
-                   Already have an account? Login
-                 </Link>
+                <Link href="/login" className="text-green-500 underline text-sm text-center">
+                  Already have an account? Login
+                </Link>
               </p>
               {/* User Type Toggle Button */}
               <button

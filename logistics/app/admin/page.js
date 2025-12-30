@@ -53,7 +53,7 @@ const AdminPage = () => {
       fetchDriver();
       fetchAllRides();
 
-      socketRef.current = io("http://localhost:4000");
+      socketRef.current = io("https://logistics-bknd.onrender.com");
       
       // Listen for status updates
       socketRef.current.on('ride_status_update', ({ rideId, status }) => {

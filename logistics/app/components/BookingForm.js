@@ -66,7 +66,7 @@ export default function BookingForm() {
         
         const fetchActiveRequest = async () => {
             try {
-                const res = await fetch(`http://localhost:4000/api/ride-request/active/${session.user.email}`);
+                const res = await fetch(`https://logistics-bknd.onrender.com/api/ride-request/active/${session.user.email}`);
                 const data = await res.json();
                 
                 if (data) {
@@ -101,7 +101,7 @@ export default function BookingForm() {
     // Socket logic
     useEffect(() => {
         if (!session?.user?.email) return;
-        socketRef.current = io("http://localhost:4000");
+        socketRef.current = io("https://logistics-bknd.onrender.com");
         socketRef.current.emit("register", { type: "user", id: session?.user?.email });
 
         socketRef.current.on("driver_response", (data) => updateResponses(data));
@@ -200,7 +200,7 @@ export default function BookingForm() {
 
     const onSubmit = async (data) => {
         try {
-            const res = await fetch("http://localhost:4000/api/ride-request", {
+            const res = await fetch("https://logistics-bknd.onrender.com/api/ride-request", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

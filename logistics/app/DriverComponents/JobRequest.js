@@ -42,7 +42,7 @@ const JobRequests = ({ onRideConfirmed }) => {
     if (!driverLocation || !session?.user?.email) return;
 
     // Pass driverId to get my specific history
-    fetch(`http://localhost:4000/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}&driverId=${session.user.email}`)
+    fetch(`https://logistics-bknd.onrender.com/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}&driverId=${session.user.email}`)
       .then(res => res.json())
       .then(data => {
         const formattedRequests = data.map(req => {
@@ -95,7 +95,7 @@ const JobRequests = ({ onRideConfirmed }) => {
   useEffect(() => {
     if (!session?.user?.email || !driverLocation) return;
 
-    socketRef.current = io('http://localhost:4000');
+    socketRef.current = io('https://logistics-bknd.onrender.com');
 
     socketRef.current.emit('register', {
       type: 'driver',

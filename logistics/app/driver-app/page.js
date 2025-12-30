@@ -51,7 +51,7 @@ export default function DriverAppPage() {
     };
 
     const initSocket = (rideId, authCode) => {
-        socketRef.current = io("http://localhost:4000");
+        socketRef.current = io("https://logistics-bknd.onrender.com");
         
         socketRef.current.on('connect', () => {
             console.log("Connected to socket");

@@ -34,7 +34,7 @@ const ActiveJob = ({ job }) => {
   useEffect(() => {
     if (!isExpanded) return; // Only connect when expanded to save resources
 
-    socketRef.current = io("http://localhost:4000");
+    socketRef.current = io("https://logistics-bknd.onrender.com");
     
     if (isAssigned) {
          // Join room as "Manager Viewer"
