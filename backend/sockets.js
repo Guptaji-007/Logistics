@@ -9,7 +9,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://logistics-ankits-projects-8e1d9412.vercel.app",
   "https://logistics-hs8g.vercel.app",
-  "https://logistics-zwhe.onrender.com/"
+  "https://logistics-zwhe.onrender.com"
 ];
 
 function setupSocket(server) {
