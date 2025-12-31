@@ -28,14 +28,12 @@ export async function POST(req) {
         resetExpires: expires,
       },
     });
-    console.log(user)
-
-    const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
-    await sendMail({
-      to: email,
-      subject: "Verify your email",
-      html: `<p>Click <a href="${verifyUrl}">here</a> to verify your email. This link expires in ${VERIFICATION_TOKEN_EXPIRY_MINUTES} minutes.</p>`,
-    });
+    // const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
+    // await sendMail({
+    //   to: email,
+    //   subject: "Verify your email",
+    //   html: `<p>Click <a href="${verifyUrl}">here</a> to verify your email. This link expires in ${VERIFICATION_TOKEN_EXPIRY_MINUTES} minutes.</p>`,
+    // });
 
     return new Response(JSON.stringify({ id: user.id, email: user.email }), { status: 201 });
   } catch (e) {
