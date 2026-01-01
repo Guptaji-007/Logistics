@@ -199,6 +199,7 @@ export default function BookingForm() {
     }, [selectedDropoff, setValue]);
 
     const onSubmit = async (data) => {
+        alert("Booking submitted! Waiting for driver responses...");
         try {
             const res = await fetch("https://logistics-bknd.onrender.com/api/ride-request", {
                 method: "POST",
