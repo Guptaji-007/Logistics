@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from "next/dynamic";
 import { io } from "socket.io-client";
+import { BACKEND_URL } from '../../lib/backend';
 import { ChevronDown, ChevronUp, Truck, MapPin } from 'lucide-react';
 
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -34,7 +35,7 @@ const ActiveJob = ({ job }) => {
   useEffect(() => {
     if (!isExpanded) return; // Only connect when expanded to save resources
 
-    socketRef.current = io("https://logistics-bknd.onrender.com");
+    socketRef.current = io(BACKEND_URL);
     
     if (isAssigned) {
          // Join room as "Manager Viewer"

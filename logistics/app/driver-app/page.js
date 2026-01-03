@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import dynamic from "next/dynamic";
 import { io } from "socket.io-client";
+import { BACKEND_URL } from '../../lib/backend';
 import { 
   Truck, Phone, Navigation, LogOut, CircleDot, MapPin, Play, CheckCircle
 } from 'lucide-react';
@@ -51,7 +52,7 @@ export default function DriverAppPage() {
     };
 
     const initSocket = (rideId, authCode) => {
-        socketRef.current = io("https://logistics-bknd.onrender.com");
+        socketRef.current = io(BACKEND_URL);
         
         socketRef.current.on('connect', () => {
             console.log("Connected to socket");

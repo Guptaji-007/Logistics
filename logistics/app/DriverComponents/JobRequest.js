@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { BACKEND_URL } from '../../lib/backend';
 import { useSession } from 'next-auth/react';
 import MapView from '../components/MapView';
 import 'leaflet/dist/leaflet.css';
@@ -42,7 +43,7 @@ const JobRequests = ({ onRideConfirmed }) => {
     if (!driverLocation || !session?.user?.email) return;
 
     // Pass driverId to get my specific history
-    fetch(`https://logistics-bknd.onrender.com/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}&driverId=${session.user.email}`)
+    fetch(`${BACKEND_URL}/api/ride-request/nearby?lat=${driverLocation.latitude}&lon=${driverLocation.longitude}&driverId=${session.user.email}`)
       .then(res => res.json())
       .then(data => {
         const formattedRequests = data.map(req => {
@@ -95,7 +96,7 @@ const JobRequests = ({ onRideConfirmed }) => {
   useEffect(() => {
     if (!session?.user?.email || !driverLocation) return;
 
-    socketRef.current = io('https://logistics-bknd.onrender.com');
+    socketRef.current = io(BACKEND_URL);
 
     socketRef.current.emit('register', {
       type: 'driver',

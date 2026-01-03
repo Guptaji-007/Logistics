@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic';
 import { io } from "socket.io-client";
+import { BACKEND_URL } from '../../lib/backend';
 import AdminNav from '../DriverComponents/AdminNav'
 import JobRequests from '../DriverComponents/JobRequest'
 import ActiveJob from '../DriverComponents/ActiveJob'
@@ -53,7 +54,7 @@ const AdminPage = () => {
       fetchDriver();
       fetchAllRides();
 
-      socketRef.current = io("https://logistics-bknd.onrender.com");
+    socketRef.current = io(BACKEND_URL);
       
       // Listen for status updates
       socketRef.current.on('ride_status_update', ({ rideId, status }) => {

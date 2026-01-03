@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { io } from 'socket.io-client';
+import { BACKEND_URL } from '../../lib/backend';
 import dynamic from 'next/dynamic';
 import Navbar from '../components/Navbar';
 import { useSession } from 'next-auth/react';
@@ -65,7 +66,7 @@ export default function TrackShipment({ params }) {
   useEffect(() => {
     if (!trackingId || isCompleted) return;
 
-    socketRef.current = io("https://logistics-bknd.onrender.com");
+    socketRef.current = io(BACKEND_URL);
 
     socketRef.current.on('connect', () => {
       console.log("Connected to tracking socket");

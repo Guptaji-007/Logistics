@@ -1,7 +1,9 @@
 'use client';
+import { BACKEND_URL } from '../../lib/backend';
+
 export default function ConfirmRide({ rideData }) {
     const handleConfirm = async () => {
-        const res = await fetch("https://logistics-bknd.onrender.com/api/rides/confirm", {
+        const res = await fetch(`${BACKEND_URL}/api/rides/confirm`, {
         // const res = await fetch("https://logistics-hs8g.vercel.app/api/rides/confirm", {
         // const res = await fetch("https://logistics-zh4o.onrender.com/api/rides/confirm", {
             method: "POST",
