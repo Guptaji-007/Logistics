@@ -15,6 +15,7 @@ export default function DriverAppPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [status, setStatus] = useState('assigned'); // assigned | in_progress | completed
     const [isLoading, setIsLoading] = useState(false);
+    const [driverLocation, setDriverLocation] = useState(null); // NEW: Track driver location
     
     const socketRef = useRef();
     const watchIdRef = useRef(null);
@@ -120,6 +121,10 @@ export default function DriverAppPage() {
         watchIdRef.current = navigator.geolocation.watchPosition(
             (pos) => {
                 const { latitude, longitude } = pos.coords;
+                
+                // NEW: Update local state with driver location
+                setDriverLocation({ lat: latitude, lon: longitude });
+                
                 socketRef.current?.emit("assigned_driver_location", {
                     lat: latitude,
                     lon: longitude
@@ -204,7 +209,12 @@ export default function DriverAppPage() {
             <div className="flex-1 p-4 space-y-4 pb-32 overflow-y-auto">
                 {/* Map */}
                 <div className="h-64 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative">
-                     <MapView pickup={{ lat: job?.pickupLat, lon: job?.pickupLon }} destination={{ lat: job?.dropoffLat, lon: job?.dropoffLon }} />
+                     {/* FIXED: Pass driverLocation prop */}
+                     <MapView 
+                        pickup={{ lat: job?.pickupLat, lon: job?.pickupLon }} 
+                        destination={{ lat: job?.dropoffLat, lon: job?.dropoffLon }}
+                        driverLocation={driverLocation}
+                     />
                      <button className="absolute top-3 right-3 bg-slate-800/90 text-white p-2.5 rounded-xl shadow-lg border border-slate-700 hover:bg-blue-600 z-[400]" 
                         onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&origin=${job?.pickupLat},${job?.pickupLon}&destination=${job?.dropoffLat},${job?.dropoffLon}`)}>
                         <Navigation size={20} />

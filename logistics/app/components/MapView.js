@@ -32,12 +32,12 @@ const normalizeLocation = (loc) => {
   return { lat: latNum, lon: lonNum };
 };
 
-const RoutingControl = ({ start, destination }) => {
+const RoutingControl = ({ pickup, destination, driverLocation }) => {
   const map = useMap();
   const routingRef = useRef(null);
 
   useEffect(() => {
-    if (!start || !destination || !map) return;
+    if (!destination || !map) return;
 
     // Remove any previous control so a fresh route is always drawn
     if (routingRef.current) {
@@ -45,11 +45,26 @@ const RoutingControl = ({ start, destination }) => {
       routingRef.current = null;
     }
 
-    const routingControl = L.Routing.control({
-      waypoints: [
-        L.latLng(start.lat, start.lon),
+    // Build waypoints based on driver location availability
+    let waypoints;
+    if (driverLocation) {
+      // FIXED: When driver is tracking, route from driver → pickup → destination
+      waypoints = [
+        L.latLng(driverLocation.lat, driverLocation.lon),
+        L.latLng(pickup.lat, pickup.lon),
         L.latLng(destination.lat, destination.lon),
-      ],
+      ];
+    } else {
+      // Before trip starts, show pickup → destination
+      if (!pickup) return;
+      waypoints = [
+        L.latLng(pickup.lat, pickup.lon),
+        L.latLng(destination.lat, destination.lon),
+      ];
+    }
+
+    const routingControl = L.Routing.control({
+      waypoints,
       routeWhileDragging: false,
       show: false,
       addWaypoints: false,
@@ -72,7 +87,7 @@ const RoutingControl = ({ start, destination }) => {
         try { map.removeControl(routingRef.current); } catch (e) {}
       }
     };
-  }, [start, destination, map]);
+  }, [pickup, destination, driverLocation, map]);
 
   return null;
 };
@@ -101,11 +116,11 @@ const MapView = ({ pickup, destination, driverLocation }) => {
   const normalizedDestination = normalizeLocation(destination);
   const normalizedDriver = normalizeLocation(driverLocation);
 
-  // If driver location is available (ride is live), route from driver to destination; otherwise pickup to destination
-  const routeStart = normalizedDriver || normalizedPickup;
+  // Center map on driver if available, otherwise pickup
+  const mapCenter = normalizedDriver || normalizedPickup;
   const driverPosition = normalizedDriver ? [normalizedDriver.lat, normalizedDriver.lon] : null;
 
-  if (!routeStart || !normalizedDestination) {
+  if (!mapCenter || !normalizedDestination) {
     return (
       <div className="h-full w-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
         Waiting for coordinates...
@@ -115,7 +130,7 @@ const MapView = ({ pickup, destination, driverLocation }) => {
 
   return (
     <MapContainer
-      center={[routeStart.lat, routeStart.lon]}
+      center={[mapCenter.lat, mapCenter.lon]}
       zoom={13}
       style={{ height: '100%', width: '100%', zIndex: 0 }}
     >
@@ -124,8 +139,12 @@ const MapView = ({ pickup, destination, driverLocation }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <RecenterMap center={routeStart} />
-      <RoutingControl start={routeStart} destination={normalizedDestination} />
+      <RecenterMap center={mapCenter} />
+      <RoutingControl 
+        pickup={normalizedPickup} 
+        destination={normalizedDestination}
+        driverLocation={normalizedDriver}
+      />
 
       {driverPosition && <Marker position={driverPosition} icon={driverIcon} />}
     </MapContainer>
